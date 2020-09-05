@@ -41,6 +41,8 @@ class liggghts:
     if cmdargs:
       cmdargs.insert(0,"liggghts.py")
       narg = len(cmdargs)
+      for i in range(narg):
+        cmdargs[i] = cmdargs[i].encode()
       cargs = (c_char_p*narg)(*cmdargs)
       self.lmp = c_void_p()
       self.lib.lammps_open_no_mpi(narg,cargs,byref(self.lmp))
