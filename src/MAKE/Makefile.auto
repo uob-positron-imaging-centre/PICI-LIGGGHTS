@@ -812,7 +812,7 @@ ifeq ($(USE_VTK), "ON")
                     $(shell $(ECHO) "#vtk major version detection result (lib): $(VTK_TMP)" >> $(AUTO_LOG_FILE))
                 endif
             else
-                $(error 'Could not obtain VTK_MAJOR_VERSION. As AUTOINSTALL_VTK is not set to "ON" we cannot continue'))
+                $(error 'Could not obtain VTK_MAJOR_VERSION. As AUTOINSTALL_VTK is not set to "ON" we cannot continue.\n\n If you already installed LIGGGHTS in another directory copy and paste the vtk folder in and from LIGGGHTS-PUBLIC/lib/ ! This will speedup your installation ;-)'))
             endif
         endif
     endif
