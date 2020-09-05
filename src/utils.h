@@ -128,16 +128,20 @@ namespace Utils {
 
     void addStyle(const std::string & name, int variant, Creator create) {
       std::pair<std::string, int> key(name, variant);
+      /**
       if(styleTable.find(key) != styleTable.end()){
         std::cerr << "WARNING! Style collision detected! Duplicate entry (" << key.first << ", " << key.second << ") in style table." << std::endl;
       }
+      **/
       styleTable[key] = create;
     }
 
     void addVariantSelector(const std::string & name, VariantSelector selector) {
+      /** 
       if(variantSelectorTable.find(name) != variantSelectorTable.end()){
         std::cerr << "WARNING! VariantSelector collision detected! Duplicate entry '" << name << "' in variant selector table." << std::endl;
       }
+      **/
       variantSelectorTable[name] = selector;
     }
   };
