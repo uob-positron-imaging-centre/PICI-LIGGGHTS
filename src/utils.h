@@ -67,8 +67,7 @@ namespace Utils {
 
   inline std::string int_to_string(int a)
   {
-    auto string_temp = ( std::ostringstream() << std::dec << a );
-    return static_cast< std::ostringstream & >(string_temp).str();
+   return std::to_string(a);
   }
 
   inline std::string double_to_string(double dbl)
