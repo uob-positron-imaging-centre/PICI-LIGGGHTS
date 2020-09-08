@@ -304,6 +304,7 @@ LAMMPS::LAMMPS(int narg, char **arg, MPI_Comm communicator)
       universe->uscreen = NULL;
     else {
       universe->uscreen = fopen(arg[screenflag],"w");
+      universe->uscreen_file = true;
       if (universe->uscreen == NULL)
         error->universe_one(FLERR,"Cannot open universe screen file");
     }
