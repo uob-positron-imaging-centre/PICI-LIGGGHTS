@@ -62,7 +62,7 @@ class Universe : protected Pointers {
   FILE *ulogfile;         // universe logfile
                           
   FILE *uthermofile;      // universe thermofile
-
+  bool uscreen_file;      // check if screen is actually a file 
   int existflag;          // 1 if universe exists due to -partition flag
   int nworlds;            // # of worlds in universe
   int iworld;             // which world I am in
