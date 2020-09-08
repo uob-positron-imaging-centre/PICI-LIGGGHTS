@@ -527,7 +527,7 @@ void ReadRestart::header()
             std::string ver_minor = ver.substr(dot1+1, dot2-dot1-1);
             restart_major = atoi(ver_major.c_str());
             restart_minor = atoi(ver_minor.c_str());
-            printf("version %d %d\n", restart_major, restart_minor);
+            //printf("version %d %d\n", restart_major, restart_minor);
         }
       delete [] version;
 
