@@ -70,6 +70,7 @@ void *lammps_extract_fix(void *, const char *, int, int, int, int);
 void *lammps_extract_variable(void *, char *, char *);
 
 int lammps_get_natoms(void *);
+void set_time(void *, double);
 void lammps_gather_atoms(void *, const char *, int, int, void *);
 void lammps_scatter_atoms(void *, const char *, int, int, void *);
 
