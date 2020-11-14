@@ -23,7 +23,8 @@ The LIGGGHTS® distribution includes the following files and directories:
 - python          Python wrapper on LIGGGHTS® as a library
 - src             source files
 
-## Installation
+
+## Install LIGGGHTS
 
 There are many ways to build the LIGGGHTS package (including an executable, a shared library and a static archive). The easiest method uses CMake, which flexibly handles the process of finding the external libraries that LIGGGHTS depends on. For this, you will need:
 
@@ -61,3 +62,19 @@ Three files should have been created:
 - "liggghts": the LIGGGHTS executable. This can run simulation scripts.
 - "libliggghts.so": the LIGGGHTS shared library. This can be used to run simulation from Python.
 - "libliggghts.a": the LIGGGHTS static library. This can be used to statically link against LIGGGHTS from another C++ program. Don't.
+
+
+## Install Python Interface
+
+In order to use the Python interface, we need the LIGGGHTS shared library (`libliggghts.so`) to be in a standard location - on Unix systems, that is `/usr/local/lib` - and we need to install the Python package that will communicate with it. Thankfully, both of those are done by the Python script at `python/install.py` - run it with your Python 3 interpreter:
+
+```
+$LIGGGHTS> cd python
+$LIGGGHTS/python> python3 install.py
+```
+
+You might need to give the script `sudo` permissions to copy the `libliggghts.so` file to the system library folder. Just add `sudo` before running the Python script:
+
+```
+$LIGGGHTS/python> sudo python3 install.py
+```
