@@ -7,9 +7,7 @@ SET(LIGGGHTS_PATCH_VERSION 0)
 SET(LIGGGHTS_VERSION ${LIGGGHTS_MAJOR_VERSION}.${LIGGGHTS_MINOR_VERSION}.${LIGGGHTS_PATCH_VERSION})
 
 IF (NOT CMAKE_CXX_FLAGS)
-  IF(CMAKE_COMPILER_IS_GNUCXX)
-    SET(CMAKE_CXX_FLAGS "-O2 -funroll-loops -fstrict-aliasing -Wall -Wno-uninitialized -std=c++11 -Wno-literal-suffix -fPIC")
-  ENDIF()
+  SET(CMAKE_CXX_FLAGS "-O3 -std=c++11 -fPIC")
 ENDIF()
 
 FILE(GLOB SOURCES *.cpp)
@@ -77,14 +75,15 @@ ENDIF(VTK_FOUND)
 
 #=======================================
 
+
 FIND_PACKAGE(JPEG)
 
 IF(JPEG_FOUND)
   INCLUDE_DIRECTORIES(${JPEG_INCLUDE_DIR})
   ADD_DEFINITIONS(-DLAMMPS_JPEG)
-  TARGET_LINK_LIBRARIES(liggghts_static jpeg)
-  TARGET_LINK_LIBRARIES(liggghts_shared jpeg)
-  TARGET_LINK_LIBRARIES(liggghts_bin jpeg)
+  TARGET_LINK_LIBRARIES(liggghts_static ${JPEG_LIBRARIES})
+  TARGET_LINK_LIBRARIES(liggghts_shared ${JPEG_LIBRARIES})
+  TARGET_LINK_LIBRARIES(liggghts_bin ${JPEG_LIBRARIES})
 ELSE(JPEG_FOUND)
   MESSAGE(STATUS "JPEG NOT found!")
 ENDIF(JPEG_FOUND)
@@ -117,6 +116,21 @@ ELSE(MPI_FOUND)
   TARGET_LINK_LIBRARIES(liggghts_shared mpi_stubs)
   TARGET_LINK_LIBRARIES(liggghts_bin mpi_stubs)
 ENDIF(MPI_FOUND)
+
+#======================================
+
+FIND_PACKAGE(Boost)
+
+IF(Boost_FOUND)
+  INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
+  ADD_DEFINITIONS(-DLAMMPS_BOOST)
+  TARGET_LINK_LIBRARIES(liggghts_static ${Boost_LIBRARIES})
+  TARGET_LINK_LIBRARIES(liggghts_shared ${Boost_LIBRARIES})
+  TARGET_LINK_LIBRARIES(liggghts_bin ${Boost_LIBRARIES})
+  MESSAGE(STATUS "Found Boost")
+ELSE(Boost_FOUND)
+  MESSAGE(STATUS "Boost NOT found!")
+ENDIF()
 
 #=======================================
 
