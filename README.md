@@ -1,4 +1,4 @@
-#Dominik's Improved LIGGGHTS Distribution Open-sourced (DILDO)
+# Dominik's Improved LIGGGHTS Distribution Open-sourced (DILDO)
 
 The LIGGGHTS® distribution includes the following files and directories:
 
@@ -18,7 +18,7 @@ doc/Section_start.html	   how to build and use
 
 ---
 
-##Installation
+## Installation
 
 There are many ways to build the LIGGGHTS package (including an executable, a shared library and a static archive). The easiest method uses CMake, which flexibly handles the process of finding the external libraries that LIGGGHTS depends on. For this, you will need:
 
