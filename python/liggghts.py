@@ -5,7 +5,7 @@
 #
 #   Copyright (2003) Sandia Corporation.  Under the terms of Contract
 #   DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-#   certain rights in this software.  This software is distributed under 
+#   certain rights in this software.  This software is distributed under
 #   the GNU General Public License.
 #
 #   See the README file in the top-level LAMMPS directory.
@@ -18,13 +18,13 @@ from ctypes import *
 
 class liggghts:
   def __init__(self,name="",cmdargs=None):
-    
+
     # Check which python version is being used
     self.pyVersion = sys.version_info
 
     # load libliggghts.so by default
     # if name = "g++", load libliggghts_g++.so
-    
+
     try:
       if not name: self.lib = CDLL("libliggghts.so",RTLD_GLOBAL)
       else: self.lib = CDLL("libliggghts_%s.so" % name,RTLD_GLOBAL)
@@ -37,7 +37,7 @@ class liggghts:
     # don't know how to pass an MPI communicator from PyPar
     # no_mpi call lets LAMMPS use MPI_COMM_WORLD
     # cargs = array of C strings from args
-    
+
     if cmdargs:
       cmdargs.insert(0,"liggghts.py")
       narg = len(cmdargs)
@@ -115,7 +115,7 @@ class liggghts:
 
   # in case of global datum, free memory for 1 double via lammps_free()
   # double was allocated by library interface function
-  
+
   def extract_fix(self,f_id,style,type,i=0,j=0):
     if self.pyVersion[0] == 3:
       f_id = f_id.encode()
@@ -139,7 +139,7 @@ class liggghts:
   # free memory for 1 double or 1 vector of doubles via lammps_free()
   # for vector, must copy nlocal returned values to local c_double vector
   # memory was allocated by library interface function
-  
+
   def extract_variable(self,name,group,type):
     if self.pyVersion[0] == 3:
       name = name.encode()
@@ -163,7 +163,7 @@ class liggghts:
     return None
 
   # return total number of atoms in system
-  
+
   def get_natoms(self):
     return self.lib.lammps_get_natoms(self.lmp)
 
@@ -189,3 +189,18 @@ class liggghts:
     if self.pyVersion[0] == 3:
       name = name.encode()
     self.lib.lammps_scatter_atoms(self.lmp,name,type,count,data)
+
+  def set_time(self, time):
+      '''Set current simulation time of the simulation in LIGGGHTS.
+      parameters
+      ----------
+      Input:
+        time: float
+            the current time in LIGGGHTS units ( mostly seconds)
+            
+      '''
+      time = float(time)
+      self.lib.set_time(self.lmp,time)
+
+  def __version__(self):
+    return (3, 8, 0)
