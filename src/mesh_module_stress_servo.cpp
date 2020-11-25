@@ -64,7 +64,7 @@ using namespace FixConst;
 using MODIFIED_ANDREW_AUX::Circle;
 
 #define EPSILON 1.0e-7
-#define BIG 1000000.
+#define BIG2 1000000.
 
 //#define MIN(a,b) ((a) < (b) ? (a) : (b))
 
@@ -329,7 +329,7 @@ void MeshModuleStressServo::init()
     const int nlocal = atom->nlocal;
     const double rPaMax = getMaxRad();
 
-    r = r_min = BIG;
+    r = r_min = BIG2;
     for (int i = 0; i < nlocal; ++i) {
         r = atom->radius[i];
         r_min = MIN(r_min,r);

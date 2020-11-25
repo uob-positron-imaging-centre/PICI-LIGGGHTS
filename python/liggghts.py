@@ -197,9 +197,9 @@ class liggghts:
       Input:
         time: float
             the current time in LIGGGHTS units ( mostly seconds)
-            
+
       '''
-      time = float(time)
+      time = c_double(float(time))
       self.lib.set_time(self.lmp,time)
 
   def __version__(self):

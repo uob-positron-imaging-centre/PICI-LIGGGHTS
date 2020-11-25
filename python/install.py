@@ -30,7 +30,7 @@ else: pydir = ""
 if not os.path.isdir(libdir):
   print("ERROR: libdir %s does not exist" % libdir)
   sys.exit()
-  
+
 if "LD_LIBRARY_PATH" not in os.environ:
   print("WARNING: LD_LIBRARY_PATH undefined, cannot check libdir %s" % libdir)
 else:
@@ -55,7 +55,7 @@ if pydir:
   outstr = commands.getoutput(str)
   if len(outstr.strip()): print(outstr)
   sys.exit()
-  
+
 print("installing liggghts.py in Python site-packages dir")
 
 os.chdir('../python')                # in case invoked via make in src dir

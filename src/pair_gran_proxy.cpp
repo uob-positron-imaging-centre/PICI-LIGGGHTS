@@ -113,7 +113,7 @@ void PairGranProxy::read_restart_settings(FILE * fp, const int major, const int 
       const int S = (15) & selected >> 16;
       error->warning(FLERR, "LIGGGHTS tries to use old-style hashcode to find the contact model. Update your restart file.");
       if(screen) {
-          fprintf(screen,"         original hashcode = %zd \n",selected);
+          fprintf(screen,"         original hashcode = %lld \n",selected);
           fprintf(screen,"         M = %d, T = %d, C = %d, R = %d, S = %d \n",M,T,C,R,S);
       }
       selected = ::LIGGGHTS::Utils::generate_gran_hashcode(M,T,C,R,S);

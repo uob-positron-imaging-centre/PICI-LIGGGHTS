@@ -60,7 +60,7 @@
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
-#define BIG 1000000.
+#define BIG3 1000000.
 
 /* ---------------------------------------------------------------------- */
 
@@ -205,7 +205,7 @@ void FixCheckTimestepSph::calc_courant_estims_eval()
 
   vmax = -1;
   mumax = -1;
-  courant_time = BIG;
+  courant_time = BIG3;
 
   // calculate minimum courant time step
   //inum = list->inum;

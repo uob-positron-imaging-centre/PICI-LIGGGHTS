@@ -7,7 +7,7 @@ SET(LIGGGHTS_PATCH_VERSION 0)
 SET(LIGGGHTS_VERSION ${LIGGGHTS_MAJOR_VERSION}.${LIGGGHTS_MINOR_VERSION}.${LIGGGHTS_PATCH_VERSION})
 
 IF (NOT CMAKE_CXX_FLAGS)
-  SET(CMAKE_CXX_FLAGS "-O3 -std=c++11 -fPIC")
+  SET(CMAKE_CXX_FLAGS "-O2 -std=c++11 -fPIC")
 ENDIF()
 
 FILE(GLOB SOURCES *.cpp)
@@ -118,21 +118,6 @@ ELSE(MPI_FOUND)
 ENDIF(MPI_FOUND)
 
 #======================================
-
-FIND_PACKAGE(Boost)
-
-IF(Boost_FOUND)
-  INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
-  ADD_DEFINITIONS(-DLAMMPS_BOOST)
-  TARGET_LINK_LIBRARIES(liggghts_static ${Boost_LIBRARIES})
-  TARGET_LINK_LIBRARIES(liggghts_shared ${Boost_LIBRARIES})
-  TARGET_LINK_LIBRARIES(liggghts_bin ${Boost_LIBRARIES})
-  MESSAGE(STATUS "Found Boost")
-ELSE(Boost_FOUND)
-  MESSAGE(STATUS "Boost NOT found!")
-ENDIF()
-
-#=======================================
 
 #install(TARGETS liggghts liggghts_bin
 #        RUNTIME DESTINATION bin
