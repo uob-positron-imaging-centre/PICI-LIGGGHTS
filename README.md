@@ -1,17 +1,9 @@
 ```
-
-         88 88 88          88              
-         88 "" 88          88              
-         88    88          88              
- ,adPPYb,88 88 88  ,adPPYb,88  ,adPPYba,   
-a8"    `Y88 88 88 a8"    `Y88 a8"     "8a  
-8b       88 88 88 8b       88 8b       d8  
-"8a,   ,d88 88 88 "8a,   ,d88 "8a,   ,a8"  
- `"8bbdP"Y8 88 88  `"8bbdP"Y8  `"YbbdP"'   
-
+🇵​​​​​🇮​​​​​🇨​​​​​🇮​​​​​-🇱​​​​​🇮​​​​​🇬​​​​​🇬​​​​​🇬​​​​​🇭​​​​​🇹​​​​​🇸​​​​​
 ```
 
-# Dominik's Improved LIGGGHTS Distribution Open-sourced (DILDO)
+# UoB Positron Imaging Centre's Improved LIGGGHTS Distribution
+## Internal code used through the improved Python interface
 
 The LIGGGHTS® distribution includes the following files and directories:
 
