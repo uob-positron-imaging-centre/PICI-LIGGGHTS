@@ -70,3 +70,11 @@ You might need to give the script `sudo` permissions to copy the `libliggghts.so
 ```
 $LIGGGHTS/python> sudo python3 install.py
 ```
+
+
+## JKR model Implementation
+
+The PICI-LIGGGGHTS fork comes with the implementation of the JKR - model. The model was initially implemented in a LIGGGHTS fork from [Tobias Eidevåg](https://github.com/eidevag/LIGGGHTS-PUBLIC-JKR). If you use this model please be kind and cite his [paper](https://doi.org/10.1016/j.powtec.2019.10.085).
+
+An example use and desciption can be found in the [examples folder](examples/PICI-LIGGGHTS/).
+

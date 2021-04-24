@@ -1,0 +1,133 @@
+# This simulation is made by Dominik Werner
+# The simulated system represents a rotating drum made by GranuTools
+# This file is a showcase in how to use the JKR model in LIGGGHTS
+processors 1 * 1
+############# VARIABLES #############
+variable timestep equal 1e-5
+variable rotationPeriod equal 60/30	#s per revolution
+variable runtime equal 2000000
+variable N equal 1800			    #Particle number
+
+
+variable fricPW equal 0.7		    # friction particle wall
+variable fric equal 1.0	        	# friction value, does not matter it defines the wall-wall friction
+
+variable corPP equal 0.5		    #Coeff of restitution Particle particle
+variable fricPP equal 0.8	        # friction particle particle
+variable youngmodP equal 5e6
+variable poissP equal 0.3
+variable dens equal 1500.0          
+variable youngmodW equal 9.2e6
+variable woA    equal 0.3           # Work Of Adhesion
+variable resolutionJKR equal 1e-4
+
+#Radii for the Particles. In order to make Polydispersity
+variable r1             equal 2.6e-3/2
+variable r2             equal 2.8e-3/2
+variable r3             equal 3.0e-3/2
+variable r4             equal 3.2e-3/2
+
+
+############# SYSTEM SETUP #############
+
+atom_style 	granular
+atom_modify	map array
+
+boundary	f f f	#non-periodic
+newton 		off	#Sets newtons 3rd law on or off (Effect on computation time due to less computation but higher communication)needs to be off
+communicate    single vel yes
+units 		si
+
+region		domain block -0.048 0.048 -0.002 0.0221 -0.048 0.048 units box #creates a region
+create_box  2 domain   
+#read_restart base.start
+
+
+ #creates the neighbor-list (due to only contact models this is very short
+neighbor	3.2e-3 bin
+neigh_modify	delay 0
+timestep    ${timestep}
+fix  gravi all gravity 9.81 vector 0.0 0.0 -1.0
+
+############## Particle/Wall properties #################
+
+fix  m1 all property/global youngsModulus peratomtype ${youngmodP} ${youngmodW} 
+fix  m2 all property/global poissonsRatio peratomtype ${poissP} ${poissP}
+
+fix  m3 all property/global coefficientRestitution peratomtypepair 2 &
+${corPP}      ${corPP}   &
+${corPP}      ${corPP}   
+
+
+fix  m4 all property/global coefficientFriction peratomtypepair 2 &
+${fricPP}           ${fricPW} &
+${fricPW}           ${fric}  
+
+
+fix  m6 all property/global workOfAdhesion peratomtypepair 2 &
+ ${woA}       ${woA}  &
+ ${woA}       ${woA}    
+
+fix  m5 all property/global k_finnie peratomtypepair 2  1.0 1.0 1.0 1.0 
+fix m7 all property/global resolutionJKR scalar ${resolutionJKR}
+
+
+
+
+############# WALLS #############
+fix  cad all mesh/surface/stress file mesh/rotating_drum_mm.stl type 2 scale 0.001 wear finnie
+fix  side all mesh/surface/stress file mesh/rotating_drum_side_mm.stl type 2 scale 0.001
+fix  inface all mesh/surface file mesh/inface_mm.stl type 2 scale 0.001 move 0.0 0.0 -0.02
+
+############# CONTACT MODELS #############
+fix  granwalls all wall/gran model jkr tangential history mesh n_meshes 2 meshes cad side 
+pair_style  gran model jkr tangential history
+pair_coeff  * *
+
+
+############# Particle Size Distributiuon #############
+fix pts1 all particletemplate/sphere 15485863 atom_type 1 density constant ${dens} radius constant ${r1}
+fix pts2 all particletemplate/sphere 15487471 atom_type 1 density constant ${dens} radius constant ${r2}
+fix pts3 all particletemplate/sphere 15487517 atom_type 1 density constant ${dens} radius constant ${r3}
+fix pts4 all particletemplate/sphere 15487531 atom_type 1 density constant ${dens} radius constant ${r4}
+
+fix pdd all particledistribution/discrete 32452843 4 pts1 0.25 pts2 0.25 pts3 0.25 pts4 0.25 
+
+
+
+############# PARTICLE INSERTION #############
+fix ins all insert/stream seed 32452867 distributiontemplate pdd nparticles ${N} &
+                    particlerate 10000000000    &
+                    overlapcheck yes            &
+                    all_in no                   &
+                    vel constant 0.0 0.0 -1.0   &
+                    insertion_face inface       &
+                    extrude_length 0.05
+
+
+
+#apply nve integration to all particles that are inserted as single particles
+fix		integr all nve/sphere
+
+
+############# DISPLAY SETTINGS #############
+thermo        1000
+thermo_style  custom step atoms ke vol time
+thermo_modify lost ignore norm no
+
+############# VTK output #############
+dump   dmp all custom/vtk 2000 post/drum_*.vtk id type type x y z ix iy iz vx vy vz fx fy fz omegax omegay omegaz radius density
+
+
+############# WALL ROTATION #############
+fix move all move/mesh mesh cad rotate origin 0. 0. 0. axis  0. 1. 0. period ${rotationPeriod}
+
+#######################################
+#############  Start RUN  #############
+#######################################
+run ${runtime}
+
+
+
+
+
