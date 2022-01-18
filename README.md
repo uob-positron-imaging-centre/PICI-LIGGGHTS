@@ -18,35 +18,37 @@ The LIGGGHTS® distribution includes the following files and directories:
 
 ## Install LIGGGHTS
 
-There are many ways to build the LIGGGHTS package (including an executable, a shared library and a static archive). The easiest method uses CMake, which flexibly handles the process of finding the external libraries that LIGGGHTS depends on. For this, you will need:
+There are multiple ways to build the LIGGGHTS package, including an executable, a shared library and a static archive. The easiest method uses CMake, which flexibly handles the process of finding the external libraries that LIGGGHTS depends on. For this, you will need:
 
 - A relatively modern C++ compiler (Clang and GCC are great).
 - CMake (at least version 2.8, but the latest one is recommended).
-- MPI
-- (Recommended) VTK with MPI support
+- MPI.
+- (Optionally) VTK with MPI support.
 
 Once you have those programs installed, we can create an "out-of-source" build of LIGGGHTS - that is, we compile the many files of LIGGGHTS in a separate folder, so that our source files are not clutttered. Create a `build` folder at the root of the repository:
 
-```
-$LIGGGHTS> mkdir build && cd build
-$LIGGGHTS/build>
-```
-
-While inside the `build` folder, run `cmake` with the path to the LIGGGHTS source files:
-
-```
-$LIGGGHTS/build> cmake ../src/ -DCMAKE_BUILD_TYPE=Release
+```bash
+$LIGGGHTS_DIR> mkdir build && cd build
+$LIGGGHTS_DIR/build>
 ```
 
-This will generate the required compilation scripts (Makefiles) to create the LIGGGHTS files. It should work straight out of the box, but if your VTK is installed in a non-default location, you need to point CMake to it using the flag `-DVTK_DIR=<filepath>`, where `<filepath>` should be substituted with the absolute path to the VTK installation. The script would then become:
+Where `LIGGGHTS_DIR` is the location where you cloned the repository to. Inside the `build` folder, run `cmake` with the path to the LIGGGHTS source files:
 
+```bash
+$LIGGGHTS/build> cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -march=native -fPIC" ../src/
 ```
-$LIGGGHTS/build> cmake ../src/ -DCMAKE_BUILD_TYPE=Release -DVTK_DIR=/usr/local/VTK
+
+Short explanation for the `CMAKE_CXX_FLAGS` that are passed to the compiler: `-O3` allows expensive optimisation passes, `-march=native` tunes the generated code to the specific CPU on your machine (so the resulting binary may not work on other computers), while `-fPIC` allows the code to be loaded as a shared library.
+
+The command above will generate the required compilation scripts (Makefiles) to create the LIGGGHTS files. It should work straight out of the box, but if your VTK is installed in a non-default location, you need to point CMake to it using the flag `-DVTK_DIR=<filepath>`, where `<filepath>` should be substituted with the absolute path to the VTK installation. The script would then become:
+
+```bash
+$LIGGGHTS/build> cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -march=native -fPIC" -DVTK_DIR=/usr/local/VTK ../src/
 ```
 
 Now that the right Makefiles were generated, we can (finally) compile LIGGGHTS! We can use multiple cores for the compilation, using the `-j<number of cores>` flag:
 
-```
+```bash
 $LIGGGHTS/build> make -j4
 ```
 
@@ -58,18 +60,16 @@ Three files should have been created:
 
 ## Install Python Interface
 
-In order to use the Python interface, we need the LIGGGHTS shared library (`libliggghts.so`) to be in a standard location - on Unix systems, that is `/usr/local/lib` - and we need to install the Python package that will communicate with it. Thankfully, both of those are done by the Python script at `python/install.py` - run it with your Python 3 interpreter:
+In order to use the Python interface, the system needs to know where to find the LIGGGHTS shared library (`libliggghts.so`); you can either:
+- Copy it to a standard location like `/usr/local/lib` on Unix-based systems.
+- Add the its directory to the `LD_LIBRARY_PATH` environment variable, e.g. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:LIGGGHTS_DIR/build` (recommended).
 
-```
-$LIGGGHTS> cd python
-$LIGGGHTS/python> python3 install.py
-```
+Finally, Python needs to know where to find the `LIGGGHTS_DIR/python/liggghts.py` module; again, you can either:
+- Copy it to the Python "site-packages".
+- Add its directory to the `PYTHONPATH` environment variable, e.g. `export PYTHONPATH=$PYTHONPATH:LIGGGHTS_DIR/python` (recommended).
 
-You might need to give the script `sudo` permissions to copy the `libliggghts.so` file to the system library folder. Just add `sudo` before running the Python script:
+Where `LIGGGHTS_DIR` is the location where you cloned this repository to. To test whether everything is in place.
 
-```
-$LIGGGHTS/python> sudo python3 install.py
-```
 
 
 ## JKR model Implementation
