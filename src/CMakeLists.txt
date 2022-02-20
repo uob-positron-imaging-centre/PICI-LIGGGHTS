@@ -90,7 +90,8 @@ ADD_EXECUTABLE(liggghts_bin $<TARGET_OBJECTS:liggghts_obj>)
 SET_TARGET_PROPERTIES(liggghts_bin PROPERTIES OUTPUT_NAME liggghts)
 
 #=======================================
-
+ADD_DEFINITIONS(-DSUPERQUADRIC_ACTIVE_FLAG)
+ADD_DEFINITIONS(-DNONSPHERICAL_ACTIVE_FLAG)
 FIND_PACKAGE(VTK NO_MODULE)
 
 IF(VTK_FOUND)
@@ -166,3 +167,4 @@ install(TARGETS liggghts_bin liggghts_static liggghts_shared
 IF (WIN32)
     install(DIRECTORY WINDOWS DESTINATION include)
 ENDIF()
+
