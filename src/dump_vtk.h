@@ -51,6 +51,7 @@
 #include <vtkDataObject.h>
 #include <vtkAlgorithmOutput.h>
 #include <vtkMPIController.h>
+#include <vtkVersion.h>
 #include <list>
 #include <string>
 
