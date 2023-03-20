@@ -2,7 +2,7 @@
 🇵​​​​​🇮​​​​​🇨​​​​​🇮​​​​​-🇱​​​​​🇮​​​​​🇬​​​​​🇬​​​​​🇬​​​​​🇭​​​​​🇹​​​​​🇸​​​​​
 ```
 
-# UoB Positron Imaging Centre's Improved LIGGGHTS Distribution
+# UoB Positron Imaging Centre's Improved LIGGGHTS Distribution - PICI-LIGGGGHTS-3.8.1
 ## Internal code used through the improved Python interface
 
 The LIGGGHTS® distribution includes the following files and directories:
@@ -40,7 +40,7 @@ $LIGGGHTS/build> cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -march=
 
 Short explanation for the `CMAKE_CXX_FLAGS` that are passed to the compiler: `-O3` allows expensive optimisation passes, `-march=native` tunes the generated code to the specific CPU on your machine (so the resulting binary may not work on other computers), while `-fPIC` allows the code to be loaded as a shared library.
 
-The command above will generate the required compilation scripts (Makefiles) to create the LIGGGHTS files. It should work straight out of the box, but if your VTK is installed in a non-default location, you need to point CMake to it using the flag `-DVTK_DIR=<filepath>`, where `<filepath>` should be substituted with the absolute path to the VTK installation. The script would then become:
+The command above will generate the required compilation scripts (Makefiles) to create the LIGGGHTS files. It should work straight out of the box, but if your VTK is installed in a non-default location, you need to point CMake to it using the flag `-DVTK_DIR=<filepath>`, where `<filepath>` should be substituted with the absolute path to the VTK installation (which should also contain some `.cmake` files). The script would then become:
 
 ```bash
 $LIGGGHTS/build> cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3 -march=native -fPIC" -DVTK_DIR=/usr/local/VTK ../src/
