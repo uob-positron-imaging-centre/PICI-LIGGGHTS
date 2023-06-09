@@ -104,12 +104,19 @@ IF(VTK_FOUND)
     TARGET_LINK_LIBRARIES(liggghts_shared ${VTK_LIBRARIES})
     TARGET_LINK_LIBRARIES(liggghts_bin ${VTK_LIBRARIES})
   else()
-    TARGET_LINK_LIBRARIES(liggghts_obj ${VTK_LIBRARIES})
-    TARGET_LINK_LIBRARIES(liggghts_static ${VTK_LIBRARIES})
-    TARGET_LINK_LIBRARIES(liggghts_shared ${VTK_LIBRARIES})
-    TARGET_LINK_LIBRARIES(liggghts_bin ${VTK_LIBRARIES})
 
-    vtk_module_autoinit(TARGETS liggghts_obj liggghts_static liggghts_shared liggghts_bin MODULES ${VTK_LIBRARIES})
+    # Only initialize minimum required VTK modules
+    SET(VTK_MODULES
+        "VTK::CommonDataModel" "VTK::IOLegacy" "VTK::IOParallelXML"
+        "VTK::ParallelMPI" "VTK::FiltersCore")
+
+    TARGET_LINK_LIBRARIES(liggghts_obj ${VTK_MODULES})
+    TARGET_LINK_LIBRARIES(liggghts_static ${VTK_MODULES})
+    TARGET_LINK_LIBRARIES(liggghts_shared ${VTK_MODULES})
+    TARGET_LINK_LIBRARIES(liggghts_bin ${VTK_MODULES})
+
+    vtk_module_autoinit(TARGETS liggghts_obj liggghts_static liggghts_shared liggghts_bin
+                        MODULES ${VTK_MODULES})
   endif()
 
   MESSAGE(STATUS "Found VTK")
