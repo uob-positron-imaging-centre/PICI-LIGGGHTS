@@ -1,0 +1,14 @@
+notebook
+jupyterlab
+jupyterhub
+numpy
+scipy
+pandas
+opencv-python
+plotly
+kaleido
+matplotlib
+pyvista
+konigcell>=0.2
+coexist>=0.3
+nbgitpuller
