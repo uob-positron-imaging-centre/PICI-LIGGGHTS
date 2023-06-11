@@ -1,10 +1,9 @@
-FROM dealii/dealii:v9.4.0-focal
+FROM --platform=linux/amd64 dealii/dealii:v9.4.0-focal
 
 # Set user to what Binder expects
-ARG NB_USER=dealii
-ARG NB_UID=1000
+ENV NB_USER dealii
+ENV NB_UID 1000
 ENV USER ${NB_USER}
-ENV NB_UID ${NB_UID}
 ENV HOME /home/${NB_USER}
 
 # Make sure the contents of our repo are in ${HOME}
@@ -24,7 +23,7 @@ RUN python3 -m pip install --no-cache-dir -r requirements.txt
 USER root
 RUN mkdir /usr/etc
 
-# Install PICI-LIGGGHTS
+# Install VTK and PICI-LIGGGHTS
 RUN bash install_liggghts.sh
 
 # LIGGGHTS Python interface
@@ -32,7 +31,7 @@ RUN mkdir /usr/etc/PICI-LIGGGHTS-Python && cp PICI-LIGGGHTS/python/liggghts.py /
 ENV PYTHONPATH="${PYTHONPATH}:/usr/etc/PICI-LIGGGHTS-Python"
 
 # Cleanup
-RUN rm -rf PICI-LIGGGHTS install_liggghts.sh requirements.txt
+RUN rm -rf PICI-LIGGGHTS VTK-9.2.6 install_liggghts.sh requirements.txt
 
 # Set user
 USER ${NB_USER}

@@ -1,6 +1,7 @@
 notebook
 jupyterlab
 jupyterhub
+nbgitpuller
 numpy
 scipy
 pandas
@@ -8,7 +9,7 @@ opencv-python
 plotly
 kaleido
 matplotlib
-pyvista
-konigcell>=0.2
-coexist>=0.3
-nbgitpuller
+pyvista==0.39.1
+vtk==9.2.6
+konigcell==0.2.1
+coexist==0.3.2
