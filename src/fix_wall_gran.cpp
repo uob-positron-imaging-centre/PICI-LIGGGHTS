@@ -153,7 +153,9 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     Q = Q_add = 0.;
 
     area_calculation_mode_ = CONDUCTION_CONTACT_AREA_OVERLAP;
-
+    holes_filename_ = NULL; // Or nullptr if using C++11 or later
+    mesh_id_for_holes_file_target_ = NULL; // Initialize your new pointer
+    target_iMesh_for_holes_ = -1; // Initialize to an invalid index
     // parse args
     //style = new char[strlen(arg[2])+2];
     //strcpy(style,arg[2]);
@@ -356,6 +358,20 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
           iarg_ += 2;
           hasargs = true;
         }
+        else if (strcmp(arg[iarg_],"holes_file") == 0) { // sieve addition
+          if (iarg_+3 > narg)
+             error->fix_error(FLERR,this,"expecting filename after keyword 'holes_file' and a target mesh id");
+          int len = strlen(arg[iarg_+1]) + 1;
+          holes_filename_ = new char[len];
+          strcpy(holes_filename_, arg[iarg_+1]);
+          if (modify->find_fix(arg[iarg_+2]) == -1)
+            error->fix_error(FLERR,this,"could not find fix mesh id you provided");
+            int len_id = strlen(arg[iarg_ + 2]) + 1;
+            mesh_id_for_holes_file_target_ = new char[len_id];
+            strcpy(mesh_id_for_holes_file_target_, arg[iarg_ + 2]);
+            iarg_ += 3; // Consumed "holes_file", filename, and target_mesh_id
+            hasargs = true;
+       }
     }
 
     if(impl)
@@ -379,6 +395,9 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
         (domain->triclinic || dynamic_cast<DomainWedge*>(domain))     &&
         (domain->xperiodic || domain->yperiodic || domain->zperiodic) )
         error->fix_error(FLERR, this, "Triclinic or wedge domain is not allowed with periodic boundary conditions and meshes. This can be overridden by using the allow_special_domain_periodic option of fix wall/gran. In this case the user must ensure that meshes are sufficiently far away from periodic boundaries");
+    if (holes_filename_) {
+          parse_holes_file(); // Call the new parsing function
+    }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -565,6 +584,9 @@ FixWallGran::~FixWallGran()
     if(primitiveWall_ != 0) delete primitiveWall_;
     if(FixMesh_list_) delete []FixMesh_list_;
     delete impl;
+    delete[] holes_filename_; 
+    delete[] mesh_id_for_holes_file_target_; 
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -641,6 +663,38 @@ void FixWallGran::init()
         (
             modify->find_fix_property("sum_normal_force_","property/atom","scalar",0,0,style, false)
         );
+        if (holes_filename_) {
+          if (!mesh_id_for_holes_file_target_) {
+                error->fix_error(FLERR,this,"Internal error: holes_file was processed but target_mesh_id for holes was not set.");
+          }
+          if (meshwall_ != 1) {
+              error->fix_error(FLERR,this,"'holes_file' with a target mesh ID can only be used with 'mesh' wall style.");
+          }
+          if (!FixMesh_list_ || n_FixMesh_ == 0) {
+                char err_msg[256];
+                snprintf(err_msg, sizeof(err_msg), "'holes_file' with target mesh ID ('%s') specified, but no meshes are defined for this fix.", mesh_id_for_holes_file_target_);
+                error->fix_error(FLERR,this,err_msg);
+          }
+          bool target_mesh_found_in_init = false; // Renamed to avoid conflict with constructor's var
+          // target_iMesh_for_holes_ should have been set in the constructor by parse_holes_file
+          if (target_iMesh_for_holes_ >=0 && target_iMesh_for_holes_ < n_FixMesh_ &&
+              FixMesh_list_[target_iMesh_for_holes_] &&
+              strcmp(FixMesh_list_[target_iMesh_for_holes_]->id, mesh_id_for_holes_file_target_) == 0) {
+              target_mesh_found_in_init = true;
+          }
+    
+          if (!target_mesh_found_in_init) {
+              char err_msg[256];
+              snprintf(err_msg, sizeof(err_msg), "The target mesh ID for holes ('%s') specified with 'holes_file' was not found or setup correctly prior to init(). FixMesh index: %d", mesh_id_for_holes_file_target_, target_iMesh_for_holes_);
+              error->fix_error(FLERR,this,err_msg);
+          }
+          // If all checks pass and holes are defined, build the map
+          if (!virtual_holes_.empty()){ // Ensure virtual_holes_ were actually parsed
+              build_triangle_hole_map();
+          } else if (comm->me == 0 && holes_filename_[0] != '\0') {
+              fprintf(screen, "LIGGGHTS: Fix %s: Warning - holes_file ('%s') was specified, but no virtual holes were parsed. Triangle-hole map will not be built.\n", id, holes_filename_);
+          }
+        }
 }
 
 void FixWallGran::createMulticontactData()
@@ -899,6 +953,7 @@ void FixWallGran::post_force_mesh(int vflag)
 
             // do not handle ghost particles
             if (iPart >= nlocal) continue;
+            
 
             int idTri = mesh->id(iTri);
 
@@ -953,7 +1008,47 @@ void FixWallGran::post_force_mesh(int vflag)
             #endif
             
             if(deltan > cutneighmax_) continue;
+            bool particle_in_hole = false;
+            // Only apply this specific hole check if:
+            // 1. Virtual holes are defined.
+            // 2. The current mesh (iMesh) is the designated target mesh for holes.
+            if (!virtual_holes_.empty() && iMesh == target_iMesh_for_holes_) {
+                int global_tri_id = mesh->id(iTri); // Get global ID of the current triangle (local or ghost)
 
+                auto holes_on_triangle = triangle_holes[global_tri_id];
+               
+                if (!holes_on_triangle.empty()) { // Ensure there's actually a list of holes for this tri
+                    double particle_radius_val = radius_ ? radius_[iPart] : r0_;
+                    for (int hole_idx : holes_on_triangle) {
+                        
+                        const VirtualHole& hole = virtual_holes_[hole_idx];
+                        if (hole.radius <= particle_radius_val) {
+                          continue;
+                        }
+                        double dx = x_[iPart][0] - hole.center[0];
+                        double dy = x_[iPart][1] - hole.center[1];
+                        double dz = x_[iPart][2] - hole.center[2];
+                        double dist_sq = dx*dx + dy*dy + dz*dz;
+
+                        double effective_touch_radius = - 0.1 * particle_radius_val + hole.radius;
+                        // also check if the radius of the hole is larger than the particle radius
+                        
+                        if (dist_sq < effective_touch_radius * effective_touch_radius) {
+                            particle_in_hole = true;
+                            break; // Particle is in at least one relevant hole for this triangle
+                        }
+                    }
+                }
+            }
+            // If not the target mesh, or no holes defined, particle_in_hole remains false.
+            // The original code (your snippet) for this section was:
+            // if (!virtual_holes_.empty()) { /* loops through ALL virtual_holes_ */ }
+            // This new logic replaces that for the target_iMesh_for_holes_.
+
+            if (particle_in_hole) {
+                continue; // Skip force calculations for this particle with this triangle face
+            }
+            // >>> END NEW HOLE CHECK <<<
             sidata.i = iPart;
 
             bool intersectflag = (deltan <= 0);
@@ -1335,6 +1430,261 @@ void FixWallGran::wall_temperature_unique(bool &has_temp,bool &temp_unique, doub
 }
 
 /* ---------------------------------------------------------------------- */
+// In fix_wall_gran.cpp, add this new method
+void FixWallGran::parse_holes_file() {
+  if (!holes_filename_) {
+      // This case is fine if holes_file is an optional argument.
+      // if (comm->me == 0) {
+      //    fprintf(screen, "Fix %s: No holes_filename provided. Skipping virtual hole parsing.\n", id);
+      // }
+      return;
+  }
+
+  // also inittoalise everything for the acceleration structure
+  if (holes_filename_ && mesh_id_for_holes_file_target_) { // If holes are active
+    // (Existing validation for mesh_id_for_holes_file_target_ should be here)
+    // ... e.g., check if it exists in FixMesh_list_ ...
+    bool found_target_mesh = false;
+    for (int i = 0; i < n_FixMesh_; ++i) {
+        if (FixMesh_list_[i] && strcmp(FixMesh_list_[i]->id, mesh_id_for_holes_file_target_) == 0) {
+            target_iMesh_for_holes_ = i; // Store the index
+            found_target_mesh = true;
+            if (comm->me == 0) {
+                fprintf(screen, "LIGGGHTS: Holes will be applied to mesh ID '%s' (index %d).\n",
+                        mesh_id_for_holes_file_target_, target_iMesh_for_holes_);
+            }
+            break;
+        }
+    }
+    if (!found_target_mesh) {
+        // This error should ideally be caught by earlier validation,
+        // but as a safeguard:
+        char err_msg[512];
+        snprintf(err_msg, sizeof(err_msg), "Target mesh ID '%s' for holes was parsed but not found in the mesh list during index assignment.", mesh_id_for_holes_file_target_);
+        error->fix_error(FLERR, this, err_msg);
+    }
+}
+
+  std::ifstream hole_file(holes_filename_);
+  if (!hole_file.is_open()) {
+      char err_msg[256];
+      snprintf(err_msg, sizeof(err_msg), "Cannot open holes file '%s' for fix ID '%s'", holes_filename_, id);
+      error->one(FLERR, err_msg);
+      return;
+  }
+
+  if (comm->me == 0) {
+      fprintf(screen, "Fix ID '%s': Opened holes file '%s' for reading.\n", id, holes_filename_);
+  }
+
+  std::string line;
+  double x_coord, y_coord, z_coord, rad_val;
+  int line_number = 0;
+  int successfully_parsed_count = 0;
+
+  virtual_holes_.clear(); 
+
+  while (std::getline(hole_file, line)) {
+      line_number++;
+
+      size_t first_char = line.find_first_not_of(" \t\n\r\f\v");
+      if (std::string::npos == first_char) {
+          if (comm->me == 0) {
+              fprintf(screen, "Fix ID '%s': Skipping line %d (all whitespace): '%s'\n", id, line_number, line.c_str());
+          }
+          continue;
+      }
+      line = line.substr(first_char);
+
+      size_t last_char = line.find_last_not_of(" \t\n\r\f\v");
+      if (std::string::npos != last_char) {
+          line = line.substr(0, last_char + 1);
+      }
+
+      if (line.empty() || line[0] == '#') {
+          if (comm->me == 0) {
+               fprintf(screen, "Fix ID '%s': Skipping line %d (empty or comment): '%s'\n", id, line_number, line.c_str());
+          }
+          continue;
+      }
+
+ 
+
+      std::istringstream iss(line);
+      // Perform the extraction
+      iss >> x_coord >> y_coord >> z_coord >> rad_val;
+      // Check the stream state after extraction
+      bool parse_ok = !iss.fail(); // True if extraction was successful up to this point
+
+      bool only_whitespace_left = true;
+
+      if (parse_ok) {
+          // Numbers were parsed successfully (or at least no immediate fail state).
+          // Now, check if anything other than whitespace remains.
+          char c;
+          // Check if we are at EOF. If so, iss.get(c) will fail.
+          // If not at EOF, then read characters.
+          if (iss.eof()) { // If already at EOF after reading numbers, then only_whitespace_left is true
+              only_whitespace_left = true;
+          } else {
+              // Try to read the next character. If it's not whitespace, then it's an error.
+              // If it is whitespace, consume all subsequent whitespace.
+              // If after consuming whitespace, we are not at EOF, it's an error.
+              iss.clear(); // Clear EOF flags if any, to allow peeking/getting
+              int next_char = iss.peek(); // Peek at the next character
+              if (next_char == EOF) {
+                  only_whitespace_left = true; // Nothing left after numbers
+              } else {
+                  // There are more characters. Check them.
+                  while (iss.get(c)) { 
+                      if (!isspace(static_cast<unsigned char>(c))) {
+                          only_whitespace_left = false; 
+                          break;
+                      }
+                  }
+                  // If the loop finished due to EOF, only_whitespace_left remains true.
+                  // If it broke due to non-whitespace, only_whitespace_left is false.
+              }
+          }
+      } else {
+          // parse_ok is false, meaning the initial extraction of 4 numbers failed.
+          // In this case, only_whitespace_left doesn't strictly matter for the error condition,
+          // but we set it to false to ensure the error condition below is triggered.
+          only_whitespace_left = false;
+      }
+
+
+      // Determine if the line is valid based on both parsing and leftover check.
+      if (!parse_ok || !only_whitespace_left) {
+          char err_msg[512];
+          snprintf(err_msg, sizeof(err_msg), "Error parsing line %d in holes file '%s' for fix ID '%s'. Expected 4 numbers followed by only whitespace. Content: '%s'", line_number, holes_filename_, id, line.c_str());
+          error->warning(FLERR, err_msg);
+          continue; // Skip this malformed line
+      }
+
+      // If we reach here, the line format is valid.
+      // Now, proceed with the radius value check.
+      if (rad_val <= 0.0) {
+          char err_msg[256];
+          snprintf(err_msg, sizeof(err_msg), "Invalid radius (<= 0) on line %d in holes file '%s' for fix ID '%s': %f. Line content: '%s'", line_number, holes_filename_, id, rad_val, line.c_str());
+          error->warning(FLERR, err_msg);
+          continue;
+      }
+
+      VirtualHole hole;
+      hole.center[0] = x_coord;
+      hole.center[1] = y_coord;
+      hole.center[2] = z_coord;
+      hole.radius = rad_val;
+      hole.radius_sq = rad_val * rad_val;
+      virtual_holes_.push_back(hole);
+      successfully_parsed_count++;
+
+    
+  }
+
+  hole_file.close();
+
+  if (comm->me == 0) {
+      fprintf(screen, "Fix ID '%s': Finished parsing holes file '%s'.\n", id, holes_filename_);
+      fprintf(screen, "Fix ID '%s': Read %d lines, successfully parsed %d virtual holes.\n", id, line_number, successfully_parsed_count);
+      if (successfully_parsed_count == 0 && line_number > 0 && holes_filename_ && holes_filename_[0] != '\0') {
+           fprintf(screen, "Fix ID '%s': Warning - No holes were successfully parsed from '%s', though the file was read (or attempted).\n", id, holes_filename_);
+      }
+  }
+}
+
+bool FixWallGran::check_triangle_hole_touch(const double v1[3], const double v2[3], const double v3[3], const VirtualHole& hole) {
+  double tri_centroid[3];
+  for (int i = 0; i < 3; ++i) {
+      tri_centroid[i] = (v1[i] + v2[i] + v3[i]) / 3.0;
+  }
+
+  // Calculate radius squared of triangle's bounding sphere (centered at centroid)
+  double r_sq_v1 = dist_sq_points(tri_centroid, v1);
+  double r_sq_v2 = dist_sq_points(tri_centroid, v2);
+  double r_sq_v3 = dist_sq_points(tri_centroid, v3);
+  double tri_bs_radius_sq = r_sq_v1;
+  if (r_sq_v2 > tri_bs_radius_sq) tri_bs_radius_sq = r_sq_v2;
+  if (r_sq_v3 > tri_bs_radius_sq) tri_bs_radius_sq = r_sq_v3;
+
+  // Check distance between triangle centroid and hole center
+  double dist_centers_sq = dist_sq_points(tri_centroid, hole.center);
+
+  // Check for overlap: distance between centers < sum of radii
+  double sum_radii = sqrt(tri_bs_radius_sq) + hole.radius;
+  return dist_centers_sq < (sum_radii * sum_radii);
+}
+// In fix_wall_gran.cpp
+// In fix_wall_gran.cpp
+
+void FixWallGran::build_triangle_hole_map() {
+  if (comm->me == 0) {
+      fprintf(screen, "LIGGGHTS: Fix %s: Building triangle-hole map...\n", id);
+  }
+
+
+  if (virtual_holes_.empty() || target_iMesh_for_holes_ < 0 || target_iMesh_for_holes_ >= n_FixMesh_) {
+      if (comm->me == 0 && !virtual_holes_.empty() && holes_filename_) {
+           fprintf(screen, "LIGGGHTS: Fix %s: No valid target mesh for holes (index %d) or no holes defined. Skipping triangle-hole map build.\n", id, target_iMesh_for_holes_);
+      }
+      return;
+  }
+
+  FixMeshSurface* target_fm = FixMesh_list_[target_iMesh_for_holes_];
+  // TriMesh is typedef'd from SurfaceMesh<3,5>, which inherits MultiNodeMesh<3>
+  // So, mesh is a pointer to a class that has the node(i,j,out) method.
+  LAMMPS_NS::TriMesh* mesh = target_fm->triMesh(); // Ensure TriMesh is used if type is specific
+                                               // Or use auto* mesh = target_fm->triMesh(); if C++11 onwards and clear
+  if (!mesh) {
+      if (comm->me == 0) fprintf(screen, "LIGGGHTS: Fix %s: Target mesh for holes (ID: %s) is null. Skipping map build.\n", id, mesh_id_for_holes_file_target_);
+      return;
+  }
+  int global_size = mesh->sizeLocal();
+  if (comm->me == 0) {
+      fprintf(screen, "LIGGGHTS: Fix %s: Target mesh '%s' has %d global triangles.\n", id, target_fm->id, global_size);
+  }
+  triangle_holes.resize(global_size); // Resize to global size, will be filled with vectors of hole indices
+  int n_local_triangles = mesh->sizeLocal();
+  int triangles_with_holes_count = 0;
+
+  // Buffers to store coordinates for one triangle's vertices
+  double v1_coords[3];
+  double v2_coords[3];
+  double v3_coords[3];
+
+  for (int iTri_local = 0; iTri_local < n_local_triangles; ++iTri_local) {
+      int global_tri_id = mesh->id(iTri_local);
+
+      // Get triangle vertex coordinates using the public 'node' method
+      // The first argument is the local triangle index.
+      // The second argument is the vertex index within the triangle (0, 1, or 2).
+      // The third argument is the output array for coordinates.
+      mesh->node(iTri_local, 0, v1_coords);
+      mesh->node(iTri_local, 1, v2_coords);
+      mesh->node(iTri_local, 2, v3_coords);
+
+      std::vector<int> touching_holes_indices;
+      for (size_t iHole = 0; iHole < virtual_holes_.size(); ++iHole) {
+          // Pass the coordinate arrays to your checking function
+          if (check_triangle_hole_touch(v1_coords, v2_coords, v3_coords, virtual_holes_[iHole])) {
+              touching_holes_indices.push_back(static_cast<int>(iHole));
+          }
+      }
+
+      if (!touching_holes_indices.empty()) {
+        triangle_holes[global_tri_id] = touching_holes_indices;
+          triangles_with_holes_count++;
+      }
+  }
+
+  if (comm->me == 0) {
+      fprintf(screen, "LIGGGHTS: Fix %s: Triangle-hole map built for target mesh '%s'. %d local triangles have associated holes (out of %d local triangles).\n",
+              id, FixMesh_list_[target_iMesh_for_holes_]->id, triangles_with_holes_count, n_local_triangles);
+      fprintf(screen, "LIGGGHTS: Fix %s: Total entries in triangle_holes (on proc 0): %zu.\n", id, triangle_holes.size());
+  }
+}
+
 
 void FixWallGran::addHeatFlux(TriMesh *mesh,int ip, const double ri, double delta_n, double area_ratio)
 {

@@ -62,6 +62,13 @@ namespace LCM = LIGGGHTS::ContactModels;
 
 namespace LAMMPS_NS {
 
+struct VirtualHole {
+    double center[3];
+    double radius;
+    double radius_sq; // Store radius squared for efficiency in distance checks
+};
+
+
 class FixWallGran : public Fix, public LIGGGHTS::IContactHistorySetup {
 
  friend class LIGGGHTS::Walls::IGranularWall;
@@ -227,6 +234,31 @@ class FixWallGran : public Fix, public LIGGGHTS::IContactHistorySetup {
   int nlocal_;
   double **x_, **f_, *radius_, *rmass_, **wallforce_, r0_;
 
+  // V`ariables for mesh holes in case sieve is used
+  char *holes_filename_; // To store the name of the holes definition file
+  int target_iMesh_for_holes_;
+  std::vector<VirtualHole> virtual_holes_; // To store the parsed hole data
+
+  // Add a helper function declaration to parse the file
+  void parse_holes_file();
+
+  char *mesh_id_for_holes_file_target_; // 
+  std::vector<std::vector<int>> triangle_holes;
+
+  
+  // --- Helper methods for geometry ---
+  // Distance squared between two 3D points
+  double dist_sq_points(const double p1[3], const double p2[3]) {
+      double d = 0.0;
+      for (int i = 0; i < 3; ++i) d += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+      return d;
+  }
+
+  // --- Method declarations ---
+  void build_triangle_hole_map();
+  bool check_triangle_hole_touch(const double v1[3], const double v2[3], const double v3[3], const VirtualHole& hole);
+
+
 #ifdef SUPERQUADRIC_ACTIVE_FLAG
   double **quat_, **shape_, **blockiness_;
 #endif
@@ -329,6 +361,7 @@ class FixWallGran : public Fix, public LIGGGHTS::IContactHistorySetup {
   double cutneighmax_;
 
   virtual void post_force_wall(int vflag);
+
 };
 
 }
