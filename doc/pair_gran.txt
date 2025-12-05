@@ -80,6 +80,14 @@ pair_style hybrid gran        model hertz     tangential history &
 IMPORTANT NOTE: The order of model keywords is important, you have to stick
 to the order as outlined in the "Syntax" section of this doc page.
 
+An additional optional keyword {synchronized_verlet} with values = on or off may be
+appended to the pair_style command. When enabled, the improved velocity-Verlet scheme
+proposed by Vyas et al. (Comput. Phys. Commun. 305, 109524, 2025) synchronizes the half-step
+velocities and full-step contact geometry used for tangential history updates. This removes the
+spurious pendular motion that can appear when very small particles roll between much larger ones.
+The flag is currently supported only for the default surface model, tangential history friction,
+and when no rolling resistance model is active.
+
 [General comments:]
 
 For granular styles there are no additional coefficients to set for each pair of atom types
@@ -132,4 +140,3 @@ Models for use with this command are described "here"_Section_gran_models.html
 {rolling_friction} = 'off'
 {cohesion} = 'off'
 {surface} = 'default'
-
