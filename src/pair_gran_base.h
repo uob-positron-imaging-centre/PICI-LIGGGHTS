@@ -247,6 +247,7 @@ public:
     sidata.is_wall = false;
     sidata.computeflag = pg->computeflag();
     sidata.shearupdate = pg->shearupdate();
+    sidata.synchronized_verlet = cmodel.synchronized_verlet_enabled() ? 1 : 0;
 
     cmodel.beginPass(sidata, i_forces, j_forces);
 

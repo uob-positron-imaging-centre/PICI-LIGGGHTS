@@ -54,10 +54,13 @@ SURFACE_MODEL(SURFACE_DEFAULT,default,0)
 #include "modify.h"
 #include "fix_property_atom.h"
 #include "surface_model_base.h"
+#include "math_extra.h"
+#include "vector_liggghts.h"
 
 namespace LIGGGHTS {
 namespace ContactModels
 {
+  using namespace MathExtra;
   template<>
   class SurfaceModel<SURFACE_DEFAULT> : public SurfaceModelBase
   {
@@ -146,22 +149,12 @@ namespace ContactModels
       const double enx = sidata.en[0];
       const double eny = sidata.en[1];
       const double enz = sidata.en[2];
+      const bool sync = sidata.synchronized_verlet && !sidata.is_wall;
 
       // relative translational velocity
       const double vr1 = sidata.v_i[0] - sidata.v_j[0];
       const double vr2 = sidata.v_i[1] - sidata.v_j[1];
       const double vr3 = sidata.v_i[2] - sidata.v_j[2];
-
-      // normal component
-      const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
-      const double vn1 = vn * enx;
-      const double vn2 = vn * eny;
-      const double vn3 = vn * enz;
-
-      // tangential component
-      const double vt1 = vr1 - vn1;
-      const double vt2 = vr2 - vn2;
-      const double vt3 = vr3 - vn3;
 
       // relative rotational velocity
       const double deltan = sidata.radsum - sidata.r;
@@ -171,36 +164,97 @@ namespace ContactModels
       const double rinv = sidata.rinv;
       double wr1, wr2, wr3;
 
+      const double cri_local = sidata.radi - 0.5 * deltan;
+      const double crj_local = sidata.radj - 0.5 * deltan;
+
       if(sidata.is_wall) {
         // in case of wall contact, r is the contact radius
-        const double cr = sidata.radi - 0.5*sidata.deltan;
+        const double cr = cri_local;
         wr1 = cr * sidata.omega_i[0] * rinv;
         wr2 = cr * sidata.omega_i[1] * rinv;
         wr3 = cr * sidata.omega_i[2] * rinv;
         sidata.cri = cr;
       } else {
-        const double cri = sidata.radi - 0.5 * deltan;
-        const double crj = sidata.radj - 0.5 * deltan;
-        wr1 = (cri * sidata.omega_i[0] + crj * sidata.omega_j[0]) * rinv;
-        wr2 = (cri * sidata.omega_i[1] + crj * sidata.omega_j[1]) * rinv;
-        wr3 = (cri * sidata.omega_i[2] + crj * sidata.omega_j[2]) * rinv;
-        sidata.cri = cri;
-        sidata.crj = crj;
+        wr1 = (cri_local * sidata.omega_i[0] + crj_local * sidata.omega_j[0]) * rinv;
+        wr2 = (cri_local * sidata.omega_i[1] + crj_local * sidata.omega_j[1]) * rinv;
+        wr3 = (cri_local * sidata.omega_i[2] + crj_local * sidata.omega_j[2]) * rinv;
+        sidata.cri = cri_local;
+        sidata.crj = crj_local;
       }
 
-      // relative velocities
-      const double vtr1 = vt1 - (dz * wr2 - dy * wr3);
-      const double vtr2 = vt2 - (dx * wr3 - dz * wr1);
-      const double vtr3 = vt3 - (dy * wr1 - dx * wr2);
+      if (sync) {
+        double nhalf[3] = {sidata.en[0], sidata.en[1], sidata.en[2]};
+        const double dt_half = 0.5 * update->dt;
+        double dx_mid[3] = {dx - vr1 * dt_half, dy - vr2 * dt_half, dz - vr3 * dt_half};
+        const double mid_len = vectorMag3D(dx_mid);
+        if (mid_len > 0.0) {
+          vectorScalarDiv3D(dx_mid, mid_len);
+          vectorCopy3D(dx_mid, nhalf);
+        }
+        vectorCopy3D(nhalf, sidata.en_half);
 
-      sidata.vn = vn;
+        double contact_vec_i[3] = {-sidata.cri * nhalf[0], -sidata.cri * nhalf[1], -sidata.cri * nhalf[2]};
+        double rot_i[3];
+        vectorCross3D(sidata.omega_i, contact_vec_i, rot_i);
+
+        double rot_j[3] = {0.0, 0.0, 0.0};
+        if (!sidata.is_wall) {
+          double contact_vec_j[3] = {sidata.crj * nhalf[0], sidata.crj * nhalf[1], sidata.crj * nhalf[2]};
+          vectorCross3D(sidata.omega_j, contact_vec_j, rot_j);
+        }
+
+        double v_contact[3] = {vr1 + rot_i[0] - rot_j[0], vr2 + rot_i[1] - rot_j[1], vr3 + rot_i[2] - rot_j[2]};
+        const double vn_half = vectorDot3D(v_contact, nhalf);
+        sidata.vn = vn_half;
+        double vt_half[3] = {
+          v_contact[0] - vn_half * nhalf[0],
+          v_contact[1] - vn_half * nhalf[1],
+          v_contact[2] - vn_half * nhalf[2]
+        };
+        sidata.vtr_half1 = vt_half[0];
+        sidata.vtr_half2 = vt_half[1];
+        sidata.vtr_half3 = vt_half[2];
+
+        double vtr_full[3] = {vt_half[0], vt_half[1], vt_half[2]};
+        const double proj_full = vectorDot3D(vtr_full, sidata.en);
+        vtr_full[0] -= proj_full * sidata.en[0];
+        vtr_full[1] -= proj_full * sidata.en[1];
+        vtr_full[2] -= proj_full * sidata.en[2];
+
+        sidata.vtr1 = vtr_full[0];
+        sidata.vtr2 = vtr_full[1];
+        sidata.vtr3 = vtr_full[2];
+      } else {
+        // normal component
+        const double vn = vr1 * enx + vr2 * eny + vr3 * enz;
+        const double vn1 = vn * enx;
+        const double vn2 = vn * eny;
+        const double vn3 = vn * enz;
+
+        // tangential component
+        const double vt1 = vr1 - vn1;
+        const double vt2 = vr2 - vn2;
+        const double vt3 = vr3 - vn3;
+
+        const double vtr1 = vt1 - (dz * wr2 - dy * wr3);
+        const double vtr2 = vt2 - (dx * wr3 - dz * wr1);
+        const double vtr3 = vt3 - (dy * wr1 - dx * wr2);
+        sidata.vn = vn;
+        sidata.vtr1 = vtr1;
+        sidata.vtr2 = vtr2;
+        sidata.vtr3 = vtr3;
+        sidata.en_half[0] = enx;
+        sidata.en_half[1] = eny;
+        sidata.en_half[2] = enz;
+        sidata.vtr_half1 = vtr1;
+        sidata.vtr_half2 = vtr2;
+        sidata.vtr_half3 = vtr3;
+      }
+
       sidata.deltan = deltan;
       sidata.wr1 = wr1;
       sidata.wr2 = wr2;
       sidata.wr3 = wr3;
-      sidata.vtr1 = vtr1;
-      sidata.vtr2 = vtr2;
-      sidata.vtr3 = vtr3;
       sidata.P_diss = 0.;
     }
 

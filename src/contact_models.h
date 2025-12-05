@@ -143,6 +143,7 @@ private:
     CohesionModel<Style::COHESION> cohesionModel;
     TangentialModel<Style::TANGENTIAL> tangentialModel;
     RollingModel<Style::ROLLING> rollingModel;
+    bool synchronized_verlet_flag;
 
 public:
 
@@ -154,7 +155,8 @@ public:
         normalModel(lmp, hsetup, this),
         cohesionModel(lmp, hsetup,this),
         tangentialModel(lmp, hsetup,this),
-        rollingModel(lmp, hsetup,this)
+        rollingModel(lmp, hsetup,this),
+        synchronized_verlet_flag(false)
     { }
 
     int64_t hashcode()
@@ -167,6 +169,7 @@ public:
         cohesionModel.registerSettings(settings);
         tangentialModel.registerSettings(settings);
         rollingModel.registerSettings(settings);
+        settings.registerOnOff("synchronized_verlet", synchronized_verlet_flag, false);
     }
 
     inline void postSettings(IContactHistorySetup * hsetup)
@@ -176,6 +179,17 @@ public:
         cohesionModel.postSettings(hsetup, this);
         tangentialModel.postSettings(hsetup, this);
         rollingModel.postSettings(hsetup, this);
+        if (synchronized_verlet_flag) {
+            if (is_wall())
+                error->all(FLERR, "synchronized_verlet is not supported for wall/gran");
+            if (Style::SURFACE != SURFACE_DEFAULT)
+                error->all(FLERR, "synchronized_verlet requires the default surface model");
+            if (Style::TANGENTIAL != TANGENTIAL_HISTORY)
+                error->all(FLERR, "synchronized_verlet requires the tangential history model");
+            if (Style::ROLLING != ROLLING_OFF)
+                error->all(FLERR, "synchronized_verlet is incompatible with rolling friction models");
+        }
+        set_synchronized_verlet(synchronized_verlet_flag);
     }
 
     inline void connectToProperties(PropertyRegistry & registry)
@@ -266,6 +280,9 @@ public:
             return Style::ROLLING == Factory::instance().getRollingModelId(model);
         return false;
     }
+
+    bool synchronized_verlet_enabled() const
+    { return synchronized_verlet_flag; }
 };
 
 template<>
@@ -278,6 +295,7 @@ private:
     class CohesionModelBase * cohesionModel;
     class TangentialModelBase * tangentialModel;
     class RollingModelBase * rollingModel;
+    bool synchronized_verlet_flag;
 
     int idNormal;
     int idTangential;
@@ -291,6 +309,7 @@ public:
 
     ContactModel(LAMMPS * lmp, IContactHistorySetup * hsetup, bool _is_wall, const int64_t hash) :
         ContactModelBase(lmp, _is_wall),
+        synchronized_verlet_flag(false),
         idNormal    (static_cast<int>( hash        & ((1<<6) - 1))),
         idTangential(static_cast<int>((hash >>  6) & ((1<<6) - 1))),
         idCohesion  (static_cast<int>((hash >> 12) & ((1<<6) - 1))),
@@ -375,6 +394,7 @@ public:
         cohesionModel->registerSettings(settings);
         tangentialModel->registerSettings(settings);
         rollingModel->registerSettings(settings);
+        settings.registerOnOff("synchronized_verlet", synchronized_verlet_flag, false);
     }
 
     inline void postSettings(IContactHistorySetup * hsetup)
@@ -384,6 +404,17 @@ public:
         cohesionModel->postSettings(hsetup, this);
         tangentialModel->postSettings(hsetup, this);
         rollingModel->postSettings(hsetup, this);
+        if (synchronized_verlet_flag) {
+            if (is_wall())
+                error->all(FLERR, "synchronized_verlet is not supported for wall/gran");
+            if (surfaceModel == NULL || idSurface != SURFACE_DEFAULT)
+                error->all(FLERR, "synchronized_verlet requires the default surface model");
+            if (idTangential != TANGENTIAL_HISTORY)
+                error->all(FLERR, "synchronized_verlet requires the tangential history model");
+            if (idRolling != ROLLING_OFF)
+                error->all(FLERR, "synchronized_verlet is incompatible with rolling friction models");
+        }
+        set_synchronized_verlet(synchronized_verlet_flag);
     }
 
     inline void connectToProperties(PropertyRegistry & registry)
@@ -417,6 +448,9 @@ public:
     {
         return normalModel->stressStrainExponent();
     }
+
+    bool synchronized_verlet_enabled() const
+    { return synchronized_verlet_flag; }
 
     void tally_pp(double val,int i, int j, int index)
     {

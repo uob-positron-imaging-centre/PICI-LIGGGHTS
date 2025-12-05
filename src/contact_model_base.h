@@ -52,6 +52,12 @@ public:
     bool is_wall()
     { return is_wall_; }
 
+    bool synchronized_verlet_enabled() const
+    { return synchronized_verlet_; }
+
+    void set_synchronized_verlet(bool flag)
+    { synchronized_verlet_ = flag; }
+
     virtual void tally_pp(double val,int i, int j, int index) = 0;
     virtual void tally_pw(double val,int i, int j, int index) = 0;
 
@@ -62,12 +68,20 @@ public:
 
     ContactModelBase(LAMMPS *lmp, bool _is_wall) :
         Pointers(lmp),
-        is_wall_(_is_wall)
+        is_wall_(_is_wall),
+        synchronized_verlet_(false)
     {}
+
+protected:
+    using Pointers::lmp;
+    using Pointers::error;
+    LAMMPS *lammps_ptr() const { return lmp; }
+    Error *error_ptr() const { return error; }
 
 private:
 
     bool is_wall_;
+    bool synchronized_verlet_;
     std::map<std::string, int> history_offsets;
 };
 

@@ -136,6 +136,7 @@ struct SurfacesIntersectData : SurfacesCloseData {
   double r;         
   double rinv;      
   double en[3];     
+  double en_half[3];
 
   double kt;
   double kn;
@@ -156,14 +157,23 @@ struct SurfacesIntersectData : SurfacesCloseData {
   double vtr1;  
   double vtr2;
   double vtr3;
+  double vtr_half1;
+  double vtr_half2;
+  double vtr_half3;
 
   double mi;    
   double mj;
   double meff;  
 
   mutable double P_diss; 
+  int synchronized_verlet;
 
-  SurfacesIntersectData() : Fn(0.0), Ft(0.0) {}
+  SurfacesIntersectData() : Fn(0.0), Ft(0.0)
+  {
+    en_half[0] = en_half[1] = en_half[2] = 0.0;
+    vtr_half1 = vtr_half2 = vtr_half3 = 0.0;
+    synchronized_verlet = 0;
+  }
 };
 
 struct ForceData {

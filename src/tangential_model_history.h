@@ -56,6 +56,24 @@ TANGENTIAL_MODEL(TANGENTIAL_HISTORY,history,2)
 namespace LIGGGHTS {
 namespace ContactModels
 {
+  inline void project_to_plane_rescale(double *vec, const double *normal)
+  {
+    const double original_mag = vectorMag3D(vec);
+    const double projection = vectorDot3D(vec, normal);
+    vec[0] -= projection * normal[0];
+    vec[1] -= projection * normal[1];
+    vec[2] -= projection * normal[2];
+    const double planar_mag = vectorMag3D(vec);
+    if (planar_mag > 0.0 && original_mag > 0.0) {
+      const double scale = original_mag / planar_mag;
+      vec[0] *= scale;
+      vec[1] *= scale;
+      vec[2] *= scale;
+    } else if (original_mag == 0.0) {
+      vec[0] = vec[1] = vec[2] = 0.0;
+    }
+  }
+
   template<>
   class TangentialModel<TANGENTIAL_HISTORY> : public TangentialModelBase
   {
@@ -137,6 +155,9 @@ namespace ContactModels
         if(sidata.contact_flags)
             *sidata.contact_flags |= CONTACT_TANGENTIAL_MODEL;
 
+        const bool sync = sidata.synchronized_verlet;
+        const double * const normal_pre = sync ? sidata.en_half : sidata.en;
+
         // shear history effects
         double * const shear = &sidata.contact_history[history_offset];
         double shear_old[3];
@@ -146,16 +167,16 @@ namespace ContactModels
 
         if (update_history) {
           const double dt = update->dt;
-          shear[0] += sidata.vtr1 * dt;
-          shear[1] += sidata.vtr2 * dt;
-          shear[2] += sidata.vtr3 * dt;
+          const double *const history_vel = sync ? &sidata.vtr_half1 : &sidata.vtr1;
+          shear[0] += history_vel[0] * dt;
+          shear[1] += history_vel[1] * dt;
+          shear[2] += history_vel[2] * dt;
 
-          // rotate shear displacements
+          // rotate shear displacements into the current plane
 
-          double rsht = shear[0]*enx + shear[1]*eny + shear[2]*enz;
-          shear[0] -= rsht * enx;
-          shear[1] -= rsht * eny;
-          shear[2] -= rsht * enz;
+          project_to_plane_rescale(shear, normal_pre);
+          if (sync)
+            project_to_plane_rescale(shear, sidata.en);
         }
 
         const double shrmag = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
