@@ -82,7 +82,7 @@ to the order as outlined in the "Syntax" section of this doc page.
 
 An additional optional keyword {synchronized_verlet} with values = on or off may be
 appended to the pair_style command. When enabled, the improved velocity-Verlet scheme
-proposed by Vyas et al. (Comput. Phys. Commun. 305, 109524, 2025) synchronizes the half-step
+proposed by Vyas et al. (Comput. Phys. Commun. 310, 109524, 2025) synchronizes the half-step
 velocities and full-step contact geometry used for tangential history updates. This removes the
 spurious pendular motion that can appear when very small particles roll between much larger ones.
 The flag is currently supported only for the default surface model, tangential history friction,
