@@ -59,6 +59,48 @@ namespace ContactModels
 {
   using namespace LAMMPS_NS;
 
+  inline void rotate_torque_between_normals(double *vec, const double *normal_from,
+                                            const double *normal_to, bool keep_normal)
+  {
+    double normal_component = keep_normal ? vectorDot3D(vec, normal_from) : 0.0;
+    double tangent[3] = {vec[0] - normal_component * normal_from[0],
+                         vec[1] - normal_component * normal_from[1],
+                         vec[2] - normal_component * normal_from[2]};
+
+    const double tang_mag = vectorMag3D(tangent);
+    if (tang_mag > 0.0) {
+      double rotated[3] = {tangent[0], tangent[1], tangent[2]};
+      const double dot = vectorDot3D(rotated, normal_to);
+      rotated[0] -= dot * normal_to[0];
+      rotated[1] -= dot * normal_to[1];
+      rotated[2] -= dot * normal_to[2];
+      const double rot_mag = vectorMag3D(rotated);
+      if (rot_mag > 0.0) {
+        const double scale = tang_mag / rot_mag;
+        rotated[0] *= scale;
+        rotated[1] *= scale;
+        rotated[2] *= scale;
+      } else {
+        rotated[0] = rotated[1] = rotated[2] = 0.0;
+      }
+      tangent[0] = rotated[0];
+      tangent[1] = rotated[1];
+      tangent[2] = rotated[2];
+    } else {
+      tangent[0] = tangent[1] = tangent[2] = 0.0;
+    }
+
+    if (keep_normal) {
+      vec[0] = tangent[0] + normal_component * normal_to[0];
+      vec[1] = tangent[1] + normal_component * normal_to[1];
+      vec[2] = tangent[2] + normal_component * normal_to[2];
+    } else {
+      vec[0] = tangent[0];
+      vec[1] = tangent[1];
+      vec[2] = tangent[2];
+    }
+  }
+
   template<>
   class RollingModel<ROLLING_CDT> : public RollingModelBase {
   public:
@@ -89,6 +131,9 @@ namespace ContactModels
     void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces) 
     {
       const double rmu = coeffRollFrict[sidata.itype][sidata.jtype];
+      const bool sync = sidata.synchronized_verlet;
+      const double *normal_half = sidata.en_half;
+      const double *normal_full = sidata.en;
 
       double r_torque[3], wr_roll[3];
       vectorZeroize3D(r_torque);
@@ -110,25 +155,25 @@ namespace ContactModels
         if (wrmag > 0.)
         {
           const double kn = sidata.kn;
-          const double enx = sidata.en[0];
-          const double eny = sidata.en[1];
-          const double enz = sidata.en[2];
-
           const double Fn = sidata.deltan*kn;
           r_torque[0] = rmu*Fn*wr1/wrmag*reff; 
           r_torque[1] = rmu*Fn*wr2/wrmag*reff;
           r_torque[2] = rmu*Fn*wr3/wrmag*reff;
 
-          // remove normal (torsion) part of torque
+          const double *normal_use = sync ? normal_half : normal_full;
+
           if(!torsion_torque)
           {
-              double rtorque_dot_delta = r_torque[0]*enx+ r_torque[1]*eny + r_torque[2]*enz;
+              double rtorque_dot_delta = vectorDot3D(r_torque, normal_use);
               double r_torque_n[3];
-              r_torque_n[0] = enx * rtorque_dot_delta;
-              r_torque_n[1] = eny * rtorque_dot_delta;
-              r_torque_n[2] = enz * rtorque_dot_delta;
+              r_torque_n[0] = normal_use[0] * rtorque_dot_delta;
+              r_torque_n[1] = normal_use[1] * rtorque_dot_delta;
+              r_torque_n[2] = normal_use[2] * rtorque_dot_delta;
               vectorSubtract3D(r_torque,r_torque_n,r_torque);
           }
+
+          if (sync)
+            rotate_torque_between_normals(r_torque, normal_half, normal_full, torsion_torque);
         }
       } else {
 
@@ -137,23 +182,23 @@ namespace ContactModels
 
         if(wr_rollmag > 0.)
         {
-          const double enx = sidata.en[0];
-          const double eny = sidata.en[1];
-          const double enz = sidata.en[2];
-
           // calculate torque
           vectorScalarMult3D(wr_roll,rmu*sidata.kn*sidata.deltan*reff/wr_rollmag,r_torque);
 
-          // remove normal (torsion) part of torque
+          const double *normal_use = sync ? normal_half : normal_full;
+
           if(!torsion_torque)
           {
-              const double rtorque_dot_delta = r_torque[0]*enx + r_torque[1]*eny + r_torque[2]*enz;
+              const double rtorque_dot_delta = vectorDot3D(r_torque, normal_use);
               double r_torque_n[3];
-              r_torque_n[0] = enx * rtorque_dot_delta;
-              r_torque_n[1] = eny * rtorque_dot_delta;
-              r_torque_n[2] = enz * rtorque_dot_delta;
+              r_torque_n[0] = normal_use[0] * rtorque_dot_delta;
+              r_torque_n[1] = normal_use[1] * rtorque_dot_delta;
+              r_torque_n[2] = normal_use[2] * rtorque_dot_delta;
               vectorSubtract3D(r_torque,r_torque_n,r_torque);
           }
+
+          if (sync)
+            rotate_torque_between_normals(r_torque, normal_half, normal_full, torsion_torque);
         }
       }
 

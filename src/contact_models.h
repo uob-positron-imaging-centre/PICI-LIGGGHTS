@@ -186,8 +186,8 @@ public:
                 error->all(FLERR, "synchronized_verlet requires the default surface model");
             if (Style::TANGENTIAL != TANGENTIAL_HISTORY)
                 error->all(FLERR, "synchronized_verlet requires the tangential history model");
-            if (Style::ROLLING != ROLLING_OFF)
-                error->all(FLERR, "synchronized_verlet is incompatible with rolling friction models");
+            if (Style::ROLLING != ROLLING_OFF && Style::ROLLING != ROLLING_CDT)
+                error->all(FLERR, "synchronized_verlet is incompatible with this rolling model");
         }
         set_synchronized_verlet(synchronized_verlet_flag);
     }
@@ -411,8 +411,8 @@ public:
                 error->all(FLERR, "synchronized_verlet requires the default surface model");
             if (idTangential != TANGENTIAL_HISTORY)
                 error->all(FLERR, "synchronized_verlet requires the tangential history model");
-            if (idRolling != ROLLING_OFF)
-                error->all(FLERR, "synchronized_verlet is incompatible with rolling friction models");
+            if (idRolling != ROLLING_OFF && idRolling != ROLLING_CDT)
+                error->all(FLERR, "synchronized_verlet is incompatible with this rolling model");
         }
         set_synchronized_verlet(synchronized_verlet_flag);
     }
