@@ -198,6 +198,7 @@ public:
     sidata.computeflag = wg->computeflag();
     sidata.shearupdate = wg->shearupdate();
     sidata.jtype = wg->atom_type_wall();
+    sidata.synchronized_verlet = cmodel.synchronized_verlet_enabled() ? 1 : 0;
 
     double force_old[3]={}, f_pw[3];
 

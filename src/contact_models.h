@@ -180,8 +180,6 @@ public:
         tangentialModel.postSettings(hsetup, this);
         rollingModel.postSettings(hsetup, this);
         if (synchronized_verlet_flag) {
-            if (is_wall())
-                error->all(FLERR, "synchronized_verlet is not supported for wall/gran");
             if (Style::SURFACE != SURFACE_DEFAULT)
                 error->all(FLERR, "synchronized_verlet requires the default surface model");
             if (Style::TANGENTIAL != TANGENTIAL_HISTORY)
@@ -405,8 +403,6 @@ public:
         tangentialModel->postSettings(hsetup, this);
         rollingModel->postSettings(hsetup, this);
         if (synchronized_verlet_flag) {
-            if (is_wall())
-                error->all(FLERR, "synchronized_verlet is not supported for wall/gran");
             if (surfaceModel == NULL || idSurface != SURFACE_DEFAULT)
                 error->all(FLERR, "synchronized_verlet requires the default surface model");
             if (idTangential != TANGENTIAL_HISTORY)

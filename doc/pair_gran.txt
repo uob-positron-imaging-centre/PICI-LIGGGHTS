@@ -86,7 +86,8 @@ proposed by Vyas et al. (Comput. Phys. Commun. 310, 109524, 2025) synchronizes t
 velocities and full-step contact geometry used for tangential history updates. This removes the
 spurious pendular motion that can appear when very small particles roll between much larger ones.
 The flag is currently supported only for the default surface model, tangential history friction,
-and rolling resistance that is either disabled or uses the CDT model.
+and rolling resistance that is either disabled or uses the CDT model. These restrictions apply
+equally to particle-particle and wall/gran contacts.
 
 [General comments:]
 

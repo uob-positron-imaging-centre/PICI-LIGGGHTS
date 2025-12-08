@@ -149,7 +149,7 @@ namespace ContactModels
       const double enx = sidata.en[0];
       const double eny = sidata.en[1];
       const double enz = sidata.en[2];
-      const bool sync = sidata.synchronized_verlet && !sidata.is_wall;
+      const bool sync = sidata.synchronized_verlet;
 
       // relative translational velocity
       const double vr1 = sidata.v_i[0] - sidata.v_j[0];
