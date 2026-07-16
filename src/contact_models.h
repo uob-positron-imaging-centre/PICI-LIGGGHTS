@@ -162,6 +162,7 @@ public:
 
     inline void registerSettings(Settings & settings)
     {
+        surfaceModel.registerContactHeatSettings(settings);
         surfaceModel.registerSettings(settings);
         normalModel.registerSettings(settings);
         cohesionModel.registerSettings(settings);
@@ -176,6 +177,7 @@ public:
         cohesionModel.postSettings(hsetup, this);
         tangentialModel.postSettings(hsetup, this);
         rollingModel.postSettings(hsetup, this);
+        surfaceModel.postContactHeatSettings();
     }
 
     inline void connectToProperties(PropertyRegistry & registry)
@@ -185,6 +187,11 @@ public:
         cohesionModel.connectToProperties(registry);
         tangentialModel.connectToProperties(registry);
         rollingModel.connectToProperties(registry);
+    }
+
+    inline void postCreate()
+    {
+        surfaceModel.createContactHeatFix();
     }
 
     inline void beginPass(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
@@ -203,6 +210,7 @@ public:
         cohesionModel.endPass(sidata, i_forces, j_forces);
         normalModel.endPass(sidata, i_forces, j_forces);
         surfaceModel.endPass(sidata, i_forces, j_forces);
+        surfaceModel.finishContactHeatPass();
     }
 
     inline double stressStrainExponent()
@@ -227,6 +235,7 @@ public:
 
     inline void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
     {
+        sidata.P_diss = 0.;
         surfaceModel.surfacesIntersect(sidata, i_forces, j_forces);
         normalModel.surfacesIntersect(sidata, i_forces, j_forces);
         
@@ -241,6 +250,7 @@ public:
     {
         surfaceModel.endSurfacesIntersect(sidata, mesh, i_forces.delta_F);
         cohesionModel.endSurfacesIntersect(sidata, i_forces, j_forces);
+        surfaceModel.depositContactHeat(sidata);
     }
 
     inline void surfacesClose(SurfacesCloseData & scdata, ForceData & i_forces, ForceData & j_forces)
@@ -370,6 +380,7 @@ public:
 
     inline void registerSettings(Settings & settings)
     {
+        surfaceModel->registerContactHeatSettings(settings);
         surfaceModel->registerSettings(settings);
         normalModel->registerSettings(settings);
         cohesionModel->registerSettings(settings);
@@ -384,6 +395,7 @@ public:
         cohesionModel->postSettings(hsetup, this);
         tangentialModel->postSettings(hsetup, this);
         rollingModel->postSettings(hsetup, this);
+        surfaceModel->postContactHeatSettings();
     }
 
     inline void connectToProperties(PropertyRegistry & registry)
@@ -393,6 +405,11 @@ public:
         cohesionModel->connectToProperties(registry);
         tangentialModel->connectToProperties(registry);
         rollingModel->connectToProperties(registry);
+    }
+
+    inline void postCreate()
+    {
+        surfaceModel->createContactHeatFix();
     }
 
     inline void beginPass(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
@@ -411,6 +428,7 @@ public:
         cohesionModel->endPass(sidata, i_forces, j_forces);
         normalModel->endPass(sidata, i_forces, j_forces);
         surfaceModel->endPass(sidata, i_forces, j_forces);
+        surfaceModel->finishContactHeatPass();
     }
 
     inline double stressStrainExponent()
@@ -435,6 +453,7 @@ public:
 
     inline void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces)
     {
+        sidata.P_diss = 0.;
         surfaceModel->surfacesIntersect(sidata, i_forces, j_forces);
         normalModel->surfacesIntersect(sidata, i_forces, j_forces);
         
@@ -449,6 +468,7 @@ public:
     {
         surfaceModel->endSurfacesIntersect(sidata, mesh, i_forces.delta_F);
         cohesionModel->endSurfacesIntersect(sidata, i_forces, j_forces);
+        surfaceModel->depositContactHeat(sidata);
     }
 
     inline void surfacesClose(SurfacesCloseData & scdata, ForceData & i_forces, ForceData & j_forces)

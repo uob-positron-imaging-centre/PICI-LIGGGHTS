@@ -94,6 +94,79 @@ should be used if all atoms in the simulation interact via a granular potential
 of "pair_style hybrid"_pair_hybrid.html, then specific atom types can be used in the pair_coeff
 command to determine which atoms interact via a granular potential.
 
+[Contact heat generation:]
+
+Granular pair and wall contacts can convert the dissipated mechanical power
+accumulated by the contact models into particle heat. The feature is disabled
+by default and uses these model keywords:
+
+heat_generation on|off
+heat_generation_efficiency beta
+heat_partition_pp alpha
+heat_partition_wall alpha_wall
+heat_generation_tracking on|off :pre
+
+The defaults are {off}, 1.0, 0.5, 0.5, and {off}, respectively. {beta},
+{alpha}, and {alpha_wall} must be finite values between 0 and 1. Example
+particle-particle and particle-wall configurations are:
+
+pair_style gran model hertz tangential history &
+  heating_normal_hertz on heating_tangential_history on &
+  heat_generation on heat_generation_efficiency 1.0 &
+  heat_partition_pp 0.5 heat_generation_tracking on
+
+fix wall all wall/gran model hertz tangential history &
+  primitive type 1 xplane 0.0 &
+  heating_normal_hertz on heating_tangential_history on &
+  heat_generation on heat_generation_efficiency 1.0 &
+  heat_partition_wall 0.5 heat_generation_tracking on :pre
+
+For each completed contact, the generated power is
+{P_heat = beta P_diss}. The existing {heating_normal_*} and
+{heating_tangential_*} settings determine which force-law components add to
+{P_diss}. For a particle-particle contact, {alpha P_heat} is assigned to the
+particle with the lower immutable atom tag and {(1-alpha) P_heat} to the other
+particle. This tag convention makes asymmetric partitions independent of MPI
+ownership and neighbor ordering. For a wall contact, {alpha_wall P_heat} is
+assigned to the particle; the remainder is assumed to enter the wall or leave
+the particle thermal domain.
+
+Heat generation requires "fix heat/gran"_fix_heat_gran_conduction.html (or an
+equivalent {heattransfer} {fix transportequation/scalar}),
+the per-particle {Temp} and {heatSource} properties, particle mass, and a
+positive finite thermal capacity. The thermal transport fix group must contain
+every particle that should receive generated heat. Missing thermal
+prerequisites stop the run with an error. Temperature is not modified by the
+contact model. Instead, an internal
+{fix contact/heat/source} owns a separate transient {contactHeatSource}
+property, resets it once per timestep, and the scalar transport equation
+integrates it alongside {heatFlux}. The existing {heatSource} remains a
+persistent external source. If the scalar equation is integrated every
+{nevery} timesteps, the transient contact-power samples are accumulated over
+that interval.
+
+The instantaneous per-particle power is available as
+{f_contactHeatSource[0]}. With {heat_generation_tracking on}, its global sum is
+available as {f_totalContactHeatPower}. Tracking is off by default so no global
+reduction is exposed. Contributions assigned to ghost particles are reverse
+communicated once after the pair-contact pass; a physical contact is deposited
+once and results are independent of the MPI decomposition up to floating-point
+roundoff.
+
+{contactHeatSource} is transient and is not written to restart files. Particle
+temperature and the persistent {heatSource} retain their existing restart
+behavior. Reissue the granular pair style and wall fix with the heat-generation
+keywords after reading a restart.
+
+This first implementation uses constant partition factors. It does not model
+thermal-effusivity partitioning, wall thermal storage, or separate normal,
+tangential-damping, sliding, and wall output arrays. The default {beta = 1}
+assumes all modeled contact dissipation becomes heat; energy carried by sound,
+wear, fracture, plastic deformation, or other unresolved mechanisms should be
+represented by a smaller calibrated efficiency. A non-finite dissipated power
+is an error. Negative values below -1e-12 issue one warning per contact model
+and are ignored; smaller negative roundoff is silently clamped to zero.
+
 
 [Mixing, shift, table, tail correction, restart, rRESPA info:]
 
@@ -132,4 +205,3 @@ Models for use with this command are described "here"_Section_gran_models.html
 {rolling_friction} = 'off'
 {cohesion} = 'off'
 {surface} = 'default'
-

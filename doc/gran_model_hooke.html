@@ -287,9 +287,11 @@ fix id all property/global MaximumRestitution peratomtypepair n_atomtypes value_
 <p class="first admonition-title">Warning</p>
 <p class="last">You have to use atom styles beginning from 1, e.g. 1,2,3,...</p>
 </div>
-<p>This model contributes to surface heating in the frame of
-<code class="xref doc docutils literal"><span class="pre">surface</span> <span class="pre">sphere/heatable</span></code> if the
-appropriate flag is activated  (only available in the PREMIUM version).</p>
+<p>With <em>heating_normal_hooke on</em>, this model adds its instantaneous normal
+damping dissipation to the contact <em>P_diss</em> accumulator. It is deposited into
+the transient particle contact heat source when <em>heat_generation on</em> is also
+set on the granular pair style or wall fix; see
+<a class="reference internal" href="pair_gran.html"><em>pair_style gran</em></a>.</p>
 </div>
 <div class="section" id="restrictions">
 <h2>Restrictions<a class="headerlink" href="#restrictions" title="Permalink to this headline">¶</a></h2>
@@ -298,7 +300,6 @@ If using CGS units, youngsModulus must be &gt; 5e5
 When using <em>viscous</em>, FluidViscosity has to be  &gt; 0
 When using the limitForce, the specified coefficient of restitution is only approximate. This might
 become problematic for low coefficients of resitution as showin in Schwager and Poschel.</p>
-<p><em>heating_normal_hertz</em> may not be available in your version of the software.</p>
 <p><strong>Coarse-graining information:</strong></p>
 <p>Using <code class="xref doc docutils literal"><span class="pre">coarsegraining</span></code> in
 combination with this command should lead to

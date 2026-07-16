@@ -385,6 +385,9 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
 
 void FixWallGran::post_create()
 {
+    if (impl)
+      impl->post_create_granular();
+
     if(strncmp(style,"wall/gran",9) != 0)
     {
       // case non-granular (sph)

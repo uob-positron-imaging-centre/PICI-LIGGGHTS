@@ -78,6 +78,15 @@ simulation with fix property commands. See "pair_style gran"_pair_gran.html
 for more details and "the model doc page"_Section_gran_models.html for
 details.
 
+Particle-wall dissipation can be converted into particle heat with the model
+keywords {heat_generation}, {heat_generation_efficiency},
+{heat_partition_wall}, and {heat_generation_tracking}. The wallstyle and its
+arguments must appear before these model keywords. The fraction not assigned
+to the particle is assumed to enter the wall or leave the particle thermal
+domain. See the contact heat-generation section of
+"pair_style gran"_pair_gran.html for equations, defaults, thermal
+prerequisites, output, MPI behavior, and limitations.
+
 For wallstyle {mesh}, fix_id1, fix_id2 etc. must be IDs of valid fixes of
 type "fix mesh/surface"_fix_mesh_surface.html, defining the granular mesh
 to be used for the wall. Triangle-particle neighbor lists are built to efficiently
@@ -142,6 +151,8 @@ The effect of keyword {rolling_friction}, {cohesion}, {tangential_damping},
 
 If applicable, contact history is written to "binary restart files"_restart.html
 so simulations can continue properly.
+The transient contactHeatSource is not written; recreate this wall fix with
+its heat-generation keywords after reading a restart.
 None of the "fix_modify"_fix_modify.html options are relevant to this fix.
 No global scalar or vector or are stored by this fix.
 If {store_force} = 'yes' is specified, the per-atom wall force can be

@@ -80,6 +80,7 @@ class FixScalarTransportEquation : public Fix {
   void updatePtrsImpl();
 
   double *get_capacity();
+  void validate_capacity_for_contact_heat();
 
   inline int n_every()
   { return nevery_; }
@@ -100,6 +101,7 @@ class FixScalarTransportEquation : public Fix {
   char *flux_name;
   class FixPropertyAtom* fix_source;
   char *source_name;
+  class FixPropertyAtom* fix_contact_source;
 
   //Implicit fixes, names, and pointers
   double crankNicholsonFactor_;
@@ -123,6 +125,7 @@ class FixScalarTransportEquation : public Fix {
   double *quantity;   
   double *flux;       
   double *source;     
+  double *contact_source;
 
   // flag if integrate quantity or not
   bool int_flag;

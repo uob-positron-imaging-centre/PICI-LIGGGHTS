@@ -275,6 +275,11 @@ half the value is stored in each atom participating in the contact.
 With f_Temp[0] you can access the per-particle
 temperature. You can also access the total thermal energy of the fix group
 (useful for the thermo command) with f_id .</p>
+<p>When contact heat generation is enabled on a granular pair or wall contact,
+the instantaneous transient source is available as f_contactHeatSource[0].
+It is integrated in addition to the persistent f_heatSource[0] value. If
+<em>heat_generation_tracking on</em> was specified, the global instantaneous
+sum is available as f_totalContactHeatPower.</p>
 <p>In case the <em>store_contact_data</em> option is set to <em>yes</em>, additional output of
 per-atom properties is available. The property ids are nContactsConduction,
 contactAreaConduction and wallHeatFlux which represent the number of contacts a
@@ -287,8 +292,9 @@ command or to calculate atom properties.</p>
 used in the steady state detection through <code class="xref doc docutils literal"><span class="pre">fix</span> <span class="pre">ave/euler/custom</span></code>.</p>
 </div>
 <p><strong>Restart, fix_modify, run start/stop, minimize info:</strong></p>
-<p>The particle temperature and heat source is written is written to
+<p>The particle temperature and persistent heat source are written to
 <a class="reference internal" href="restart.html"><em>binary restart files</em></a> so simulations can continue properly.
+The transient contactHeatSource is reset each timestep and is not written.
 None of the <a class="reference internal" href="fix_modify.html"><em>fix_modify</em></a> options are relevant to this fix.</p>
 <p>This fix computes a scalar which can be accessed by various <span class="xref std std-ref">output commands</span>.  This scalar is the total thermal energy
 of the fix group</p>

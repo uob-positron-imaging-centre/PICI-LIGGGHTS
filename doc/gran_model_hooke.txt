@@ -128,9 +128,10 @@ fix id all property/global MaximumRestitution peratomtypepair n_atomtypes value_
 
 IMPORTANT NOTE: You have to use atom styles beginning from 1, e.g. 1,2,3,...
 
-This model contributes to surface heating in the frame of 
-"surface sphere/heatable"_gran_surface_sphere_heatable.html if the 
-appropriate flag is activated  (only available in the PREMIUM version).
+With {heating_normal_hooke on}, this model adds its instantaneous normal
+damping dissipation to the contact {P_diss} accumulator. It is deposited into
+the transient particle contact heat source when {heat_generation on} is also
+set on the granular pair style or wall fix; see "pair_style gran"_pair_gran.html.
 
 [Restrictions:]
 
@@ -139,8 +140,6 @@ If using CGS units, youngsModulus must be > 5e5
 When using {viscous}, FluidViscosity has to be  > 0
 When using the limitForce, the specified coefficient of restitution is only approximate. This might 
 become problematic for low coefficients of resitution as showin in Schwager and Poschel.
-
-{heating_normal_hertz} may not be available in your version of the software.
 
 [Coarse-graining information:]
 
@@ -173,4 +172,3 @@ may not be available in LIGGGHTS(R)-PUBLIC.
 [(Silbert)] Silbert, Ertas, Grest, Halsey, Levine, Plimpton, Phys Rev E, 64, p 051302 (2001).
 
 [(Zhang)] Zhang and Makse, Phys Rev E, 72, p 011301 (2005).
-

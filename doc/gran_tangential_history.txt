@@ -41,9 +41,11 @@ spring is no longer linear.
 The damping contribution is only added in time-steps where there is no slip,
 i.e. the Coulomb criterion is not met.
 
-This model contributes to surface heating in the frame of 
-"surface sphere/heatable"_gran_surface_sphere_heatable.html if the 
-appropriate flag is activated (only available in the PREMIUM version).
+With {heating_tangential_history on}, this model adds tangential damping and
+sliding-friction dissipation to the contact {P_diss} accumulator. It is
+deposited into the transient particle contact heat source when
+{heat_generation on} is also set on the granular pair style or wall fix; see
+"pair_style gran"_pair_gran.html.
 
 [Coarse-graining information:]
 
@@ -62,5 +64,4 @@ may not be available in LIGGGHTS(R)-PUBLIC.
 [Default:]
 
 {heating_tangential_history} = 'off'
-
 

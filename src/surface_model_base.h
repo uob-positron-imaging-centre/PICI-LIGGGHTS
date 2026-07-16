@@ -44,37 +44,55 @@
 #ifndef SURFACE_MODEL_BASE_H
 #define SURFACE_MODEL_BASE_H
 
-#include "contact_models.h"
 #include "contact_interface.h"
+#include "pointers.h"
+
+class Settings;
+class PropertyRegistry;
+namespace LAMMPS_NS { class FixContactHeatSource; }
 namespace LIGGGHTS
 {
 namespace ContactModels
 {
 
-class SurfaceModelBase : protected Pointers
+class SurfaceModelBase : protected LAMMPS_NS::Pointers
 {
   public:
-    SurfaceModelBase(LAMMPS * lmp, IContactHistorySetup*, class ContactModelBase *) :
-        Pointers(lmp)
-    {}
+    SurfaceModelBase(LAMMPS_NS::LAMMPS *, IContactHistorySetup*, class ContactModelBase *);
+
+    void registerContactHeatSettings(Settings&);
+    void postContactHeatSettings();
+    void createContactHeatFix();
+    void depositContactHeat(SurfacesIntersectData&);
+    void finishContactHeatPass();
 
     virtual void registerSettings(Settings& settings) = 0;
     virtual void postSettings(IContactHistorySetup * hsetup, ContactModelBase *cmb) = 0;
     virtual void connectToProperties(PropertyRegistry&) = 0;
     virtual bool checkSurfaceIntersect(SurfacesIntersectData & sidata) = 0;
     virtual void surfacesIntersect(SurfacesIntersectData & sidata, ForceData&, ForceData&) = 0;
-    virtual void endSurfacesIntersect(SurfacesIntersectData &sidata,TriMesh *, double * const) = 0;
+    virtual void endSurfacesIntersect(SurfacesIntersectData &sidata,LAMMPS_NS::TriMesh *, double * const) = 0;
     virtual void surfacesClose(SurfacesCloseData &scdata, ForceData&, ForceData&) = 0;
     virtual void beginPass(SurfacesIntersectData&, ForceData&, ForceData&) = 0;
     virtual void endPass(SurfacesIntersectData&, ForceData&, ForceData&) = 0;
     virtual void tally_pp(double,int,int,int) = 0;
     virtual void tally_pw(double,int,int,int) = 0;
+
+  private:
+    bool heat_generation_;
+    bool heat_generation_tracking_;
+    bool is_wall_;
+    bool warned_negative_dissipation_;
+    double heat_generation_efficiency_;
+    double heat_partition_pp_;
+    double heat_partition_wall_;
+    LAMMPS_NS::FixContactHeatSource *fix_contact_heat_source_;
 };
 
   template<int Model>
   class SurfaceModel : public SurfaceModelBase{
   public:
-    SurfaceModel(LAMMPS * lmp, IContactHistorySetup * hsetup, class ContactModelBase *cmb = 0);
+    SurfaceModel(LAMMPS_NS::LAMMPS * lmp, IContactHistorySetup * hsetup, class ContactModelBase *cmb = 0);
     inline void beginPass(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces);
     inline void endPass(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces);
 
@@ -83,7 +101,7 @@ class SurfaceModelBase : protected Pointers
     inline void connectToProperties(PropertyRegistry & registry);
     inline bool checkSurfaceIntersect(SurfacesIntersectData & sidata);
     inline void surfacesIntersect(SurfacesIntersectData & sidata, ForceData & i_forces, ForceData & j_forces);
-    inline void endSurfacesIntersect(SurfacesIntersectData & sidata, class TriMesh *mesh, double * const);
+    inline void endSurfacesIntersect(SurfacesIntersectData & sidata, LAMMPS_NS::TriMesh *mesh, double * const);
     inline void surfacesClose(SurfacesCloseData & scdata, ForceData & i_forces, ForceData & j_forces);
     inline void tally_pp(double val,int i, int j, int index);
     inline void tally_pw(double val,int i, int j, int index);

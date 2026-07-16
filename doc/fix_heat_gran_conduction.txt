@@ -114,6 +114,12 @@ With f_Temp\[0\] you can access the per-particle
 temperature. You can also access the total thermal energy of the fix group
 (useful for the thermo command) with f_id .
 
+When contact heat generation is enabled on a granular pair or wall contact,
+the instantaneous transient source is available as
+f_contactHeatSource[0]. It is integrated in addition to the persistent
+f_heatSource[0] value. If {heat_generation_tracking on} was specified, the
+global instantaneous sum is available as f_totalContactHeatPower.
+
 In case the {store_contact_data} option is set to {yes}, additional output of
 per-atom properties is available. The property ids are nContactsConduction,
 contactAreaConduction and wallHeatFlux which represent the number of contacts a
@@ -127,8 +133,9 @@ ave/euler/custom"_fix_ave_euler_custom.html.
 
 [Restart, fix_modify, run start/stop, minimize info:]
 
-The particle temperature and heat source is written is written to
+The particle temperature and persistent heat source are written to
 "binary restart files"_restart.html so simulations can continue properly.
+The transient contactHeatSource is reset each timestep and is not written.
 None of the "fix_modify"_fix_modify.html options are relevant to this fix.
 
 This fix computes a scalar which can be accessed by various "output
@@ -156,4 +163,3 @@ temp/region"_compute_temp_region.html
 
 :link(Chaudhuri)
 [(Chaudhuri)] Chaudhuri et al, Chemical Engineering Science, 61, p 6348 (2006).
-

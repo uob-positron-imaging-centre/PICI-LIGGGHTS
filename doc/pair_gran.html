@@ -262,6 +262,68 @@ of granular atom types. For example the command</p>
 (i.e. one of the pair styles above is used). If a granular potential is used as a sub-style
 of <a class="reference internal" href="pair_hybrid.html"><em>pair_style hybrid</em></a>, then specific atom types can be used in the pair_coeff
 command to determine which atoms interact via a granular potential.</p>
+<p><strong>Contact heat generation:</strong></p>
+<p>Granular pair and wall contacts can convert the dissipated mechanical power
+accumulated by the contact models into particle heat. The feature is disabled
+by default and uses these model keywords:</p>
+<pre class="literal-block">
+heat_generation on|off
+heat_generation_efficiency beta
+heat_partition_pp alpha
+heat_partition_wall alpha_wall
+heat_generation_tracking on|off
+</pre>
+<p>The defaults are <em>off</em>, 1.0, 0.5, 0.5, and <em>off</em>, respectively.
+<em>beta</em>, <em>alpha</em>, and <em>alpha_wall</em> must be finite values between 0 and 1.
+Example particle-particle and particle-wall configurations are:</p>
+<div class="highlight-python"><div class="highlight"><pre>pair_style gran model hertz tangential history &amp;
+  heating_normal_hertz on heating_tangential_history on &amp;
+  heat_generation on heat_generation_efficiency 1.0 &amp;
+  heat_partition_pp 0.5 heat_generation_tracking on
+
+fix wall all wall/gran model hertz tangential history &amp;
+  primitive type 1 xplane 0.0 &amp;
+  heating_normal_hertz on heating_tangential_history on &amp;
+  heat_generation on heat_generation_efficiency 1.0 &amp;
+  heat_partition_wall 0.5 heat_generation_tracking on
+</pre></div></div>
+<p>For each completed contact, the generated power is <em>P_heat = beta P_diss</em>.
+The existing <em>heating_normal_*</em> and <em>heating_tangential_*</em> settings determine
+which force-law components add to <em>P_diss</em>. For a particle-particle contact,
+<em>alpha P_heat</em> is assigned to the particle with the lower immutable atom tag and
+<em>(1-alpha) P_heat</em> to the other particle. This tag convention makes asymmetric
+partitions independent of MPI ownership and neighbor ordering. For a wall contact,
+<em>alpha_wall P_heat</em> is assigned to the particle; the remainder is assumed to
+enter the wall or leave the particle thermal domain.</p>
+<p>Heat generation requires <a class="reference internal" href="fix_heat_gran_conduction.html"><em>fix heat/gran</em></a>
+(or an equivalent <em>heattransfer fix transportequation/scalar</em>),
+the per-particle <em>Temp</em> and <em>heatSource</em> properties, particle mass, and a
+positive finite thermal capacity. The thermal transport fix group must contain every
+particle that should receive generated heat. Missing thermal prerequisites stop the run with an error.
+Temperature is not modified by the contact model. Instead, an internal
+<em>fix contact/heat/source</em> owns a separate transient <em>contactHeatSource</em>
+property, resets it once per timestep, and the scalar transport equation integrates
+it alongside <em>heatFlux</em>. The existing <em>heatSource</em> remains a persistent
+external source. If the scalar equation is integrated every <em>nevery</em> timesteps,
+the transient contact-power samples are accumulated over that interval.</p>
+<p>The instantaneous per-particle power is available as <em>f_contactHeatSource[0]</em>.
+With <em>heat_generation_tracking on</em>, its global sum is available as
+<em>f_totalContactHeatPower</em>. Tracking is off by default so no global reduction is
+exposed. Contributions assigned to ghost particles are reverse communicated once after
+the pair-contact pass; a physical contact is deposited once and results are independent
+of the MPI decomposition up to floating-point roundoff.</p>
+<p><em>contactHeatSource</em> is transient and is not written to restart files. Particle
+temperature and the persistent <em>heatSource</em> retain their existing restart behavior.
+Reissue the granular pair style and wall fix with the heat-generation keywords after
+reading a restart.</p>
+<p>This first implementation uses constant partition factors. It does not model
+thermal-effusivity partitioning, wall thermal storage, or separate normal,
+tangential-damping, sliding, and wall output arrays. The default <em>beta = 1</em>
+assumes all modeled contact dissipation becomes heat; energy carried by sound, wear,
+fracture, plastic deformation, or other unresolved mechanisms should be represented
+by a smaller calibrated efficiency. A non-finite dissipated power is an error. Negative
+values below -1e-12 issue one warning per contact model and are ignored; smaller negative
+roundoff is silently clamped to zero.</p>
 <p><strong>Mixing, shift, table, tail correction, restart, rRESPA info:</strong></p>
 <p>The <code class="xref doc docutils literal"><span class="pre">pair_modify</span></code> mix, shift, table, and tail options are not
 relevant for granular pair styles.</p>

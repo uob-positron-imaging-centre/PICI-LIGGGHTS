@@ -75,12 +75,14 @@ using namespace FixConst;
 
 FixScalarTransportEquation::FixScalarTransportEquation(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 {
-  fix_quantity = fix_flux = fix_source = NULL; fix_capacity = NULL;
+  fix_quantity = fix_flux = fix_source = fix_contact_source = NULL;
+  fix_capacity = NULL;
   fix_fluidQty_ = fix_transCoeffQty_ = NULL;
   fluidQty_0_       = 0;
   transCoeffQty_0_  = 0;
 
   capacity = NULL;
+  contact_source = NULL;
 
   int_flag = true;
 
@@ -257,6 +259,7 @@ void FixScalarTransportEquation::updatePtrs()
   quantity = fix_quantity->vector_atom;
   flux = fix_flux->vector_atom;
   source = fix_source->vector_atom;
+  contact_source = fix_contact_source ? fix_contact_source->vector_atom : NULL;
 
   if(implicitMode_)
     updatePtrsImpl();
@@ -336,6 +339,30 @@ double* FixScalarTransportEquation::get_capacity()
 
 /* ---------------------------------------------------------------------- */
 
+void FixScalarTransportEquation::validate_capacity_for_contact_heat()
+{
+  if (!capacity_flag)
+    error->all(FLERR,
+        "Contact heat generation requires a thermal capacity quantity");
+
+  const int max_type = atom->get_properties()->max_type();
+  FixPropertyGlobal *capacity_fix = static_cast<FixPropertyGlobal*>(
+      modify->find_fix_property(capacity_name,"property/global","peratomtype",
+                                max_type,0,style,false));
+  if (!capacity_fix)
+    error->all(FLERR,
+        "Contact heat generation requires the configured thermal capacity property");
+
+  for (int i = 0; i < max_type; i++) {
+    const double value = capacity_fix->compute_vector(i);
+    if (!std::isfinite(value) || value <= SMALL)
+      error->all(FLERR,
+          "Contact heat generation requires positive finite thermal capacity");
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void FixScalarTransportEquation::init()
 {
   if (!atom->rmass_flag) error->all(FLERR,"Please use an atom style that defines per-particle mass for fix transportequation/scalar");
@@ -356,6 +383,13 @@ void FixScalarTransportEquation::init()
       for(int i=1;i< max_type+1; i++)
           capacity[i] = fix_capacity->compute_vector(i-1);
   }
+
+  if (strcmp(equation_id,"heattransfer") == 0)
+    fix_contact_source = static_cast<FixPropertyAtom*>(
+        modify->find_fix_property("contactHeatSource","property/atom","scalar",
+                                  0,0,style,false));
+
+  updatePtrs();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -378,8 +412,10 @@ int FixScalarTransportEquation::modify_param(int narg, char **arg)
     if (narg < 2) error->fix_error(FLERR,this,"not enough arguments for fix_modify 'every'");
 
     nevery_ = force->inumeric(FLERR,arg[1]);
-    
-    return 1;
+    if (nevery_ <= 0)
+      error->fix_error(FLERR,this,"fix_modify 'every' must be positive");
+
+    return 2;
   }
   return 0;
 }
@@ -428,14 +464,25 @@ void FixScalarTransportEquation::final_integrate()
     if(!int_flag)
         return;
 
+    updatePtrs();
+
+    // Contact heat is an instantaneous power which is reset every timestep.
+    // Add it to flux before the nevery gate so flux retains the timestep sum
+    // until the next transport update. Persistent source keeps its established
+    // source*nevery behavior below.
+    if(contact_source)
+    {
+        int nlocal = atom->nlocal;
+        for (int i = 0; i < nlocal; i++)
+            flux[i] += contact_source[i];
+    }
+
     // skip if integration not wanted at this timestep
     if (update->ntimestep % nevery_)
     {
         performedIntegrationLastStep_ = false;
         return;
     }
-
-    updatePtrs();
 
     fix_source->do_forward_comm();
 

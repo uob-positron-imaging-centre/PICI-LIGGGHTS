@@ -60,6 +60,7 @@ namespace Walls {
     typedef FixWallGran ParentType;
     virtual ~IGranularWall();
     virtual void settings(int nargs, char ** args, IContactHistorySetup *hsetup) = 0;
+    virtual void post_create_granular() = 0;
     virtual void init_granular() = 0;
 
     virtual bool checkSurfaceIntersect(ContactModels::SurfacesIntersectData & sidata) = 0;

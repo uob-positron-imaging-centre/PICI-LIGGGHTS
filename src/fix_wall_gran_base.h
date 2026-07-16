@@ -88,6 +88,10 @@ public:
   {
   }
 
+  virtual void post_create_granular() {
+    cmodel.postCreate();
+  }
+
   virtual void init_granular() {
     cmodel.connectToProperties(force->registry);
 

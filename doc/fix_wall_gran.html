@@ -253,6 +253,14 @@ to define the mechanical properties for each material you are using in the
 simulation with fix property commands. See <a class="reference internal" href="pair_gran.html"><em>pair_style gran</em></a>
 for more details and <a class="reference internal" href="Section_gran_models.html"><em>the model doc page</em></a> for
 details.</p>
+<p>Particle-wall dissipation can be converted into particle heat with the model
+keywords <em>heat_generation</em>, <em>heat_generation_efficiency</em>,
+<em>heat_partition_wall</em>, and <em>heat_generation_tracking</em>. The wallstyle and
+its arguments must appear before these model keywords. The fraction not assigned
+to the particle is assumed to enter the wall or leave the particle thermal domain.
+See the contact heat-generation section of
+<a class="reference internal" href="pair_gran.html"><em>pair_style gran</em></a> for equations,
+defaults, thermal prerequisites, output, MPI behavior, and limitations.</p>
 <p>For wallstyle <em>mesh</em>, fix_id1, fix_id2 etc. must be IDs of valid fixes of
 type <a class="reference internal" href="fix_mesh_surface.html"><em>fix mesh/surface</em></a>, defining the granular mesh
 to be used for the wall. Triangle-particle neighbor lists are built to efficiently
@@ -309,7 +317,9 @@ This functionality may not be available in your version of LIGGGHTS.</p>
 <div class="section" id="restart-fix-modify-output-run-start-stop-minimize-info">
 <h2>Restart, fix_modify, output, run start/stop, minimize info<a class="headerlink" href="#restart-fix-modify-output-run-start-stop-minimize-info" title="Permalink to this headline">¶</a></h2>
 <p>If applicable, contact history is written to <a class="reference internal" href="restart.html"><em>binary restart files</em></a>
-so simulations can continue properly.
+so simulations can continue properly. The transient contactHeatSource is not
+written; recreate this wall fix with its heat-generation keywords after reading
+a restart.
 None of the <a class="reference internal" href="fix_modify.html"><em>fix_modify</em></a> options are relevant to this fix.
 No global scalar or vector or are stored by this fix.
 If <em>store_force</em> = &#8216;yes&#8217; is specified, the per-atom wall force can be
