@@ -57,22 +57,8 @@ NORMAL_MODEL(JKR,jkr,16)
 #include "normal_model_base.h"
 
 #include "fix_mesh_surface.h"
-#include "jkr_lookup_table.h"
+#include "jkr_solvers.h"
 #include "neighbor.h"
-
-
-namespace MODEL_PARAMS
-{
-  static ScalarProperty* createResolutionJKR(PropertyRegistry & registry, const char * caller, bool sanity_checks)
-  {
-      return createScalarProperty(registry, "resolutionJKR", caller);
-  }
-  static MatrixProperty* createWorkOfAdhesion(PropertyRegistry & registry, const char * caller, bool sanity_checks)
-  {
-    return createPerTypePairProperty(registry, "workOfAdhesion", caller);
-  }
-
-}
 
 namespace LIGGGHTS {
 
@@ -80,11 +66,11 @@ namespace ContactModels
 {
   class ContactModelBase;
 
-  template<>
-  class NormalModel<JKR> : public NormalModelBase
+  template<typename Solver>
+  class NormalModelJKR : public NormalModelBase
   {
   public:
-    NormalModel(LAMMPS * lmp, IContactHistorySetup* hsetup, class ContactModelBase *c) :
+    NormalModelJKR(LAMMPS * lmp, IContactHistorySetup* hsetup, class ContactModelBase *c) :
       NormalModelBase(lmp, hsetup, c),
       Yeff(NULL),
       Geff(NULL),
@@ -92,7 +78,8 @@ namespace ContactModels
       limitForce(false),
       displayedSettings(false),
       cmb(c),
-      history_offset(0)
+      history_offset(0),
+      solver(lmp)
     {
       history_offset = hsetup->add_history_value("contflag", "0");
       debug = false;
@@ -131,27 +118,13 @@ namespace ContactModels
       registry.registerProperty("Geff", &MODEL_PARAMS::createGeff,"model jkr");
       registry.registerProperty("betaeff", &MODEL_PARAMS::createBetaEff,"model jkr");
       registry.registerProperty("workOfAdhesion", &MODEL_PARAMS::createWorkOfAdhesion,  "model jkr");
-      registry.registerProperty("resolutionJKR", &MODEL_PARAMS::createResolutionJKR,  "model jkr");
 
       registry.connect("Yeff", Yeff,"model jkr");
       registry.connect("Geff", Geff,"model jkr");
       registry.connect("betaeff", betaeff,"model jkr");
       registry.connect("workOfAdhesion", workOfAdhesion,"model jkr");
-      registry.connect("resolutionJKR", resolutionJKR,"model jkr");
-      
-      
-      //Initalize the Look Up Table (LUT) 
-      lut.init(resolutionJKR);
 
-      //Display LUT properties to screen and logfile
-      if (comm->me == 0) {
-        if (screen)
-          fprintf(screen,"JKR table created with:\nResolution = %g \nMaximum(delta_delta_c) = %g\nPoints = %i\n",
-                  resolutionJKR,lut.get_max_delta_delta_c(),lut.get_nr_of_points());
-        if (logfile)
-          fprintf(logfile,"JKR table created with:\nResolution = %g \nMaximum(delta_delta_c) = %g\nPoints = %i\n",
-                  resolutionJKR,lut.get_max_delta_delta_c(),lut.get_nr_of_points());
-      }
+      solver.connectToProperties(registry);
       
       //Find max values for negative overlap threshold
       const double max_rad = registry.max_radius();
@@ -159,8 +132,8 @@ namespace ContactModels
       const int max_type = registry.max_type();
       double workOfAdhesion_max = get_max(workOfAdhesion,max_type);
       double Yeff_min = get_min(Yeff,max_type);
-      double a_0_max = lut.calculate_a0(workOfAdhesion_max,max_rad,Yeff_min);
-      double delta_c_max = lut.calculate_delta_c(a_0_max,max_rad);
+      double a_0_max = solver.calculate_a0(workOfAdhesion_max,max_rad,Yeff_min);
+      double delta_c_max = solver.calculate_delta_c(a_0_max,max_rad);
 
       double contact_distance_factor = 1 + delta_c_max/min_rad;
 
@@ -221,13 +194,14 @@ namespace ContactModels
       else
       {
         //Calculate conact force for JKR model
-        a_0 = lut.calculate_a0(workOfAdhesion[sidata.itype][sidata.jtype],reff,Yeff[itype][jtype]);
-        delta_c = lut.calculate_delta_c(a_0,reff);
+        a_0 = solver.calculate_a0(workOfAdhesion[sidata.itype][sidata.jtype],reff,Yeff[itype][jtype]);
+        delta_c = solver.calculate_delta_c(a_0,reff);
         //Fc = 3.*M_PI*gamma_surf[sidata.itype][sidata.jtype]*reff;
-        Fc = lut.calculate_fc(workOfAdhesion[sidata.itype][sidata.jtype],reff);
-        Fn_contact = lut.get_fn_fc(sidata.deltan/delta_c)*Fc;
+        Fc = solver.calculate_fc(workOfAdhesion[sidata.itype][sidata.jtype],reff);
+        const JKRResult result = solver.evaluate(sidata.deltan/delta_c);
+        Fn_contact = result.fn_fc*Fc;
 
-        a_a0 = lut.get_a_a0(sidata.deltan/delta_c);
+        a_a0 = result.a_a0;
         a = a_a0*a_0;
         //Updating kt to be correct for JKR surface as in Marshall 2009 eq 28 and kn as eq 21
       }
@@ -340,8 +314,8 @@ namespace ContactModels
           const double radi = scdata.radi;
           const double radj = scdata.is_wall ? radi : scdata.radj;
           double reff = scdata.is_wall ? radi : (radi*radj/(radi+radj));
-          double a_0 = lut.calculate_a0(workOfAdhesion[itype][jtype],reff,Yeff[itype][jtype]);
-          double delta_c = lut.calculate_delta_c(a_0,reff);
+          double a_0 = solver.calculate_a0(workOfAdhesion[itype][jtype],reff,Yeff[itype][jtype]);
+          double delta_c = solver.calculate_delta_c(a_0,reff);
           const double r = sqrt(scdata.rsq);
           
           //In this case deltan == - particle distance
@@ -351,8 +325,8 @@ namespace ContactModels
           if (deltan > -delta_c )
           {
 
-            double Fc = lut.calculate_fc(workOfAdhesion[itype][jtype],reff);
-            double Fn = lut.get_fn_fc(deltan/delta_c)*Fc;
+            double Fc = solver.calculate_fc(workOfAdhesion[itype][jtype],reff);
+            double Fn = solver.evaluate(deltan/delta_c).fn_fc*Fc;
 
             const double rinv = 1.0 / r;
 
@@ -401,9 +375,17 @@ namespace ContactModels
     int history_offset;
     double ** workOfAdhesion;
     bool tangential_damping;
-    LUT lut;
-    double resolutionJKR;
+    Solver solver;
     bool debug;
+  };
+
+  template<>
+  class NormalModel<JKR> : public NormalModelJKR<JKRLookupSolver>
+  {
+  public:
+    NormalModel(LAMMPS * lmp, IContactHistorySetup* hsetup, class ContactModelBase *c) :
+      NormalModelJKR<JKRLookupSolver>(lmp, hsetup, c)
+    {}
   };
 
 }

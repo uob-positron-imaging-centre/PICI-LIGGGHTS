@@ -1,0 +1,21 @@
+# Fresh-process run-0 benchmark for legacy JKR lookup construction.
+atom_style granular
+boundary f f f
+newton off
+communicate single vel yes
+units si
+region box block 0 0.02 0 0.01 0 0.01 units box
+create_box 1 box
+create_atoms 1 single 0.005 0.005 0.005 units box
+set atom 1 diameter 0.0028
+set atom 1 density 1500
+fix young all property/global youngsModulus peratomtype 5e6
+fix poisson all property/global poissonsRatio peratomtype 0.3
+fix restitution all property/global coefficientRestitution peratomtypepair 1 0.5
+fix friction all property/global coefficientFriction peratomtypepair 1 0.8
+fix adhesion all property/global workOfAdhesion peratomtypepair 1 0.3
+fix resolution all property/global resolutionJKR scalar 1e-4
+pair_style gran model jkr tangential history
+pair_coeff * *
+neigh_modify delay 0
+run 0

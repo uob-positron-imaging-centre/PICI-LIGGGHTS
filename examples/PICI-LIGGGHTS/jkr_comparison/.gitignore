@@ -1,0 +1,6 @@
+validation-results/
+comparison-results/
+benchmark-results/
+force_curve.dump
+log.liggghts
+._*

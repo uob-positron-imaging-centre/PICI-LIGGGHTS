@@ -29,7 +29,9 @@ Click on the style itself for a full description:
 "hertz"_gran_model_hertz.html,
 "hertz/stiffness"_gran_model_hertz_stiffness.html,
 "hooke"_gran_model_hooke.html,
-"hooke/stiffness"_gran_model_hooke_stiffness.html :tb(c=4,ea=c)
+"hooke/stiffness"_gran_model_hooke_stiffness.html,
+"jkr"_gran_model_jkr.html,
+"jkr/analytical"_gran_model_jkr.html :tb(c=4,ea=c)
 
 rolling_friction commands :h4
 
@@ -53,4 +55,3 @@ Click on the style itself for a full description:
 
 "history"_gran_tangential_history.html,
 "no_history"_gran_tangential_no_history.html :tb(c=4,ea=c)
-

@@ -1,0 +1,74 @@
+"LIGGGHTS(R)-PUBLIC WWW Site"_liws - "LIGGGHTS(R)-PUBLIC Documentation"_ld - "LIGGGHTS(R)-PUBLIC Commands"_lc :c
+
+:link(liws,http://www.cfdem.com)
+:link(ld,Manual.html)
+:link(lc,Section_commands.html#comm)
+
+:line
+
+gran model jkr and jkr/analytical models :h3
+
+[Syntax:]
+
+model jkr \[other model_type/model_name pairs as described "here"_pair_gran.html \]
+model jkr/analytical \[other model_type/model_name pairs as described "here"_pair_gran.html \] :pre
+
+The same model name is used for particle-particle and particle-wall contacts:
+
+pair_style gran model jkr tangential history
+fix walls all wall/gran model jkr tangential history mesh ...
+
+pair_style gran model jkr/analytical tangential history
+fix walls all wall/gran model jkr/analytical tangential history mesh ... :pre
+
+[Description:]
+
+Both styles implement the Johnson-Kendall-Roberts adhesive normal-contact law.
+They share the complete contact mechanics, history, damping, stiffness,
+tangential coupling, wall treatment, and detachment behavior.  They differ
+only in the numerical evaluation of contact radius and normalized force.
+
+The compatibility style {jkr} uses the original lookup table and interpolation.
+It requires these material properties:
+
+fix id all property/global workOfAdhesion peratomtypepair ntypes values ...
+fix id all property/global resolutionJKR scalar value :pre
+
+{workOfAdhesion} is in J/m^2 for SI units.  {resolutionJKR} controls the legacy
+table spacing.  A commonly used value is 1e-4.  The table construction and its
+startup report remain unchanged.
+
+The opt-in style {jkr/analytical} requires {workOfAdhesion}, but does not use or
+require {resolutionJKR}.  It solves the normalized stable JKR branch directly.
+For normalized overlap d = delta/delta_c and g = sqrt(a/a0), the larger positive
+stable root satisfies
+
+2 cbrt(6) g^4 - (4/3) cbrt(6) g - d = 0. :pre
+
+The contact radius ratio is a/a0 = g^2 and the normalized normal force is
+Fn/Fc = 4 ((a/a0)^3 - g^3).  The implementation uses Cardano/Ferrari for
+-1 <= d <= 0 and an equivalent hyperbolic cubic form for d > 0 to avoid
+cancellation at large compression.  A previously established adhesive contact
+detaches for d < -1.
+
+Both models support {tangential history} and {tangential no_history}, with
+cohesion and rolling models off and the default surface model.
+
+[Required material properties:]
+
+In addition to {workOfAdhesion}, define the usual {youngsModulus},
+{poissonsRatio}, {coefficientRestitution}, and {coefficientFriction}
+properties described for granular contact models.  Type numbering begins at 1.
+
+[Restrictions:]
+
+The analytical style deliberately ignores no lookup-table setting; remove
+{resolutionJKR} when it is not also needed by a legacy JKR contact definition.
+
+[References:]
+
+Johnson, Kendall and Roberts, Surface energy and the contact of elastic solids,
+Proceedings of the Royal Society A 324, 301-313 (1971).
+
+Marshall, Discrete-element modeling of particulate aerosol flows, Journal of
+Computational Physics 228, 1541-1561 (2009).

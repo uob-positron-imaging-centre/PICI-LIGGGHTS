@@ -52,7 +52,7 @@ TANGENTIAL_MODEL(TANGENTIAL_JKR_TAN,jkr_tan,11)
 #include "update.h"
 #include "global_properties.h"
 #include "atom.h"
-#include "jkr_lookup_table.h"
+#include "jkr_solvers.h"
 
 namespace LIGGGHTS {
 namespace ContactModels

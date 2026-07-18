@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gran model jkr and jkr/analytical models — LIGGGHTS documentation</title>
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css">
+</head>
+<body>
+<div class="wy-grid-for-nav"><section class="wy-nav-content-wrap"><div class="wy-nav-content"><div class="rst-content">
+<h1>gran model jkr and jkr/analytical models</h1>
+<h2>Syntax</h2>
+<pre>model jkr [other model_type/model_name pairs]
+model jkr/analytical [other model_type/model_name pairs]</pre>
+<p>The model name applies to particle-particle and particle-wall contacts:</p>
+<pre>pair_style gran model jkr tangential history
+fix walls all wall/gran model jkr tangential history mesh ...
+
+pair_style gran model jkr/analytical tangential history
+fix walls all wall/gran model jkr/analytical tangential history mesh ...</pre>
+<h2>Description</h2>
+<p>Both styles implement the Johnson-Kendall-Roberts adhesive normal-contact law and share contact history, damping, stiffness, tangential coupling, wall handling, and detachment behavior. They differ only in how contact radius and normalized force are evaluated.</p>
+<p><code>jkr</code> is the compatibility implementation. It uses the original lookup table and requires both properties:</p>
+<pre>fix id all property/global workOfAdhesion peratomtypepair ntypes values ...
+fix id all property/global resolutionJKR scalar value</pre>
+<p><code>workOfAdhesion</code> is in J/m² in SI units. <code>resolutionJKR</code> controls table spacing; 1e-4 is a common value. Existing interpolation and startup reporting are preserved.</p>
+<p><code>jkr/analytical</code> requires <code>workOfAdhesion</code> but not <code>resolutionJKR</code>. For normalized overlap <em>d</em> = delta/delta<sub>c</sub> and <em>g</em> = sqrt(<em>a/a</em><sub>0</sub>), it evaluates the larger positive stable root:</p>
+<pre>2 cbrt(6) g^4 - (4/3) cbrt(6) g - d = 0
+a/a0 = g^2
+Fn/Fc = 4 ((a/a0)^3 - g^3)</pre>
+<p>Cardano/Ferrari is used for -1 ≤ <em>d</em> ≤ 0 and an equivalent hyperbolic cubic form for <em>d</em> &gt; 0, avoiding large-compression cancellation. An established adhesive contact detaches below <em>d</em> = -1.</p>
+<p>Both models support <code>tangential history</code> and <code>tangential no_history</code>, with cohesion and rolling models off and the default surface model.</p>
+<h2>Required material properties</h2>
+<p>Define <code>youngsModulus</code>, <code>poissonsRatio</code>, <code>coefficientRestitution</code>, <code>coefficientFriction</code>, and <code>workOfAdhesion</code>. The legacy model additionally requires <code>resolutionJKR</code>.</p>
+<h2>References</h2>
+<p>Johnson, Kendall and Roberts (1971), <em>Surface energy and the contact of elastic solids</em>, Proceedings of the Royal Society A 324, 301–313.</p>
+<p>Marshall (2009), <em>Discrete-element modeling of particulate aerosol flows</em>, Journal of Computational Physics 228, 1541–1561.</p>
+</div></div></section></div>
+</body>
+</html>

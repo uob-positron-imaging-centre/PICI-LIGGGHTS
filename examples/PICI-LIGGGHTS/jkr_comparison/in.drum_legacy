@@ -1,0 +1,34 @@
+# Half-revolution rotating-drum comparison using the legacy JKR lookup table.
+atom_style granular
+atom_modify map array
+boundary f f f
+newton off
+communicate single vel yes
+units si
+read_data comparison-results/common_settled.data
+neighbor 0.0032 bin
+neigh_modify delay 0
+timestep 1e-5
+
+fix young all property/global youngsModulus peratomtype 5e6 9.2e6
+fix poisson all property/global poissonsRatio peratomtype 0.3 0.3
+fix restitution all property/global coefficientRestitution peratomtypepair 2 0.5 0.5 0.5 0.5
+fix friction all property/global coefficientFriction peratomtypepair 2 0.8 0.7 0.7 1.0
+fix adhesion all property/global workOfAdhesion peratomtypepair 2 0.3 0.3 0.3 0.3
+fix resolution all property/global resolutionJKR scalar 1e-4
+
+fix cad all mesh/surface file ../rotating_drum_JKR/mesh/rotating_drum_mm.stl type 2 scale 0.001
+fix side all mesh/surface file ../rotating_drum_JKR/mesh/rotating_drum_side_mm.stl type 2 scale 0.001
+fix walls all wall/gran model jkr tangential history mesh n_meshes 2 meshes cad side
+pair_style gran model jkr tangential history
+pair_coeff * *
+fix gravity all gravity 9.81 vector 0.0 0.0 -1.0
+fix integrate all nve/sphere
+fix rotate all move/mesh mesh cad rotate origin 0.0 0.0 0.0 axis 0.0 1.0 0.0 period 2.0
+
+thermo 1000
+thermo_style custom step atoms ke time
+thermo_modify lost error norm no
+dump trajectory all custom 1000 comparison-results/legacy/trajectory.dump id type radius density x y z vx vy vz
+dump_modify trajectory sort id format "%d %d %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g"
+run 100000

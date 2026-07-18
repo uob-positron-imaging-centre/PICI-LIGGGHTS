@@ -1,67 +1,50 @@
-# Using the JKR Model in PICI-LIGGGHTS
+# JKR rotating drum
 
-The JKR Contact Model is Cohesive Contact Model with the intention of replacing of the 'sjkr' (or simplified JKR) model in the standard LIGGGHTS library.
+This example demonstrates adhesive particles in the GranuTools-style rotating
+drum. PICI-LIGGGHTS provides two compatible JKR normal-model choices.
 
-The implementation of this model was developed by Eidevåg, T., Abrahamsson, P., Eng, M., & Rasmuson, A. [1] based on the 2009 article "Discrete-element modeling of particulate aerosol flow" by J.S. Marshall [2].
+## Legacy lookup-table model
 
-## Liggghts simulation setup:
+The existing syntax remains the default compatibility path:
 
-Simulation set up requires 2 main changes from a typical 'Hertz' set up:
+```text
+fix resolution all property/global resolutionJKR scalar 1e-4
+pair_style gran model jkr tangential history
+fix walls all wall/gran model jkr tangential history mesh ...
+```
 
--1. Use the 'gran model jkr' pair style
--2. Use two alternative 'fix property/global(s)'
+It constructs and reports the original lookup table at startup. Lower
+`resolutionJKR` values give finer interpolation but cover a smaller normalized
+overlap range with the fixed table size.
 
------------------------------------------------------------
-Pair Style
+## Analytical model
 
-1.     
-Use your normal simulation file and change the 'pair_style' to include the JKR model:
+The opt-in analytical implementation removes the lookup table:
 
-'pair_style     gran model jkr'
+```text
+pair_style gran model jkr/analytical tangential history
+fix walls all wall/gran model jkr/analytical tangential history mesh ...
+```
 
------------------------------------------------------------
-Property/global(s)
+Both variants require `workOfAdhesion`; only legacy `jkr` requires
+`resolutionJKR`. All other mechanics and material properties are shared.
 
-2. 
-2.1 Setting the Work of Adhesion:
+`jkr_test.sim` continues to use legacy `jkr` so existing cases do not change.
+The reproducible force validation, common-checkpoint drum comparison, plots,
+and benchmarks for both styles are in `../jkr_comparison/`:
 
-    'fix         {fix_variable} all property/global workOfAdhesion peratomtypepair {mat_property}'
+```sh
+python3 validate_force_curve.py
+python3 compare_and_benchmark.py
+```
 
-The work of adhesion is synomous with the 'Surface Energy', with units of J/m^2.
+The comparison uses the existing drum meshes, settles one common nonadhesive
+600-particle state, then runs each model for half a revolution from the same
+particle IDs, positions, and velocities.
 
-!! This property essentially defines how 'sticky' the particles are.
- 
-2.2 Setting the resolutionJKR scalar:
+## Sources
 
-    'fix        {fix_variable} all property/global resolutionJKR scalar {mat_property}' 
-
-!! The resloutionJKR scalar variable defines the "resolution" for a look-up table that is calculated at the start of a simulation. The resultant, speeds up the simulation by interpolating the contact force. 
-
-The typical value for simulations is 1e-4, and Tobias suggests it should be sufficient for mostsimulations [3].
-
-If the user is presented with: "Simulation outside LUT table, increase the resolution for speed! delta_delta_c = " see below:
-
-Lowering the resolutionJKR gives a better resolution but lower range of displacement values.
-
-What the error means: 
-The value is outside the given look-up table will then solve the fourth-order polynomial for each iteration, significantly slowing the simulation. This typically happens in 'ill-conditioned' cases, therefore, the user is suggested to use a lower value to increase simulation speed.
-
-For more information on this issue please see the original blog post: See Source [3]  
-
------------------------------------------------------------
-Key:
-
-{fix_variables}   = the user designated string variable
-{mat_property}    = the desired material property
-
------------------------------------------------------------
-
-## Credits
-https://github.com/eidevag/LIGGGHTS-PUBLIC-JKR
-
-## Sources:
-[1] Eidevåg T, Abrahamsson P, Eng M, Rasmuson A. Modeling of dry snow adhesion during normal impact with surfaces. Powder Technology. 2020 Feb 1;361:1081-92.
-
-[2] Marshall JS. Discrete-element modeling of particulate aerosol flows. Journal of Computational Physics. 2009 Mar 20;228(5):1541-61.
-
-[3] Tobias Eidevåg, CFDEM Forum, LIGGGHTS PUBLIC V3.8.0 WITH JKR CONTACT MODEL (link) https://www.cfdem.com/forums/liggghts-public-v380-jkr-contact-model
+- Eidevåg, Abrahamsson, Eng, and Rasmuson, *Modeling of dry snow adhesion
+  during normal impact with surfaces*, Powder Technology 361 (2020), 1081–1092.
+- Marshall, *Discrete-element modeling of particulate aerosol flows*, Journal
+  of Computational Physics 228 (2009), 1541–1561.

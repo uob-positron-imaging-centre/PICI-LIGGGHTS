@@ -1,0 +1,30 @@
+# Frozen settled geometry: legacy JKR contact-loop benchmark.
+atom_style granular
+atom_modify map array
+boundary f f f
+newton off
+communicate single vel yes
+units si
+read_data comparison-results/common_settled.data
+neighbor 0.0032 bin
+neigh_modify delay 0 once yes
+timestep 1e-5
+fix young all property/global youngsModulus peratomtype 5e6 9.2e6
+fix poisson all property/global poissonsRatio peratomtype 0.3 0.3
+fix restitution all property/global coefficientRestitution peratomtypepair 2 0.5 0.5 0.5 0.5
+fix friction all property/global coefficientFriction peratomtypepair 2 0.8 0.7 0.7 1.0
+fix adhesion all property/global workOfAdhesion peratomtypepair 2 0.3 0.3 0.3 0.3
+fix resolution all property/global resolutionJKR scalar 1e-4
+fix cad all mesh/surface file ../rotating_drum_JKR/mesh/rotating_drum_mm.stl type 2 scale 0.001
+fix side all mesh/surface file ../rotating_drum_JKR/mesh/rotating_drum_side_mm.stl type 2 scale 0.001
+fix walls all wall/gran model jkr tangential history mesh n_meshes 2 meshes cad side
+pair_style gran model jkr tangential history
+pair_coeff * *
+compute peratom all contact/atom
+compute contacts all reduce sum c_peratom
+variable contact_count equal c_contacts/2
+thermo 20000
+thermo_style custom step atoms v_contact_count
+thermo_modify lost error norm no
+run 20000
+print "CONTACT_COUNT ${contact_count}"

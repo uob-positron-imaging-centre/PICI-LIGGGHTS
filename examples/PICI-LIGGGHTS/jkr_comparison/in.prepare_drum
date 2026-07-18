@@ -1,0 +1,45 @@
+# Prepare one non-adhesive 600-particle checkpoint for both JKR models.
+processors 1 1 1
+atom_style granular
+atom_modify map array
+boundary f f f
+newton off
+communicate single vel yes
+units si
+
+region domain block -0.048 0.048 -0.002 0.0221 -0.048 0.048 units box
+create_box 2 domain
+neighbor 0.0032 bin
+neigh_modify delay 0
+timestep 1e-5
+
+fix young all property/global youngsModulus peratomtype 5e6 9.2e6
+fix poisson all property/global poissonsRatio peratomtype 0.3 0.3
+fix restitution all property/global coefficientRestitution peratomtypepair 2 0.5 0.5 0.5 0.5
+fix friction all property/global coefficientFriction peratomtypepair 2 0.8 0.7 0.7 1.0
+
+fix cad all mesh/surface file ../rotating_drum_JKR/mesh/rotating_drum_mm.stl type 2 scale 0.001
+fix side all mesh/surface file ../rotating_drum_JKR/mesh/rotating_drum_side_mm.stl type 2 scale 0.001
+fix inlet all mesh/surface file ../rotating_drum_JKR/mesh/inface_mm.stl type 2 scale 0.001 move 0.0 0.0 -0.02
+fix walls all wall/gran model hertz tangential history mesh n_meshes 2 meshes cad side
+pair_style gran model hertz tangential history
+pair_coeff * *
+
+fix pts1 all particletemplate/sphere 15485863 atom_type 1 density constant 1500 radius constant 0.0013
+fix pts2 all particletemplate/sphere 15487471 atom_type 1 density constant 1500 radius constant 0.0014
+fix pts3 all particletemplate/sphere 15487517 atom_type 1 density constant 1500 radius constant 0.0015
+fix pts4 all particletemplate/sphere 15487531 atom_type 1 density constant 1500 radius constant 0.0016
+fix pdd all particledistribution/discrete 32452843 4 pts1 0.25 pts2 0.25 pts3 0.25 pts4 0.25
+fix insert all insert/stream seed 32452867 distributiontemplate pdd nparticles 600 &
+  particlerate 10000000000 overlapcheck yes all_in no vel constant 0.0 0.0 -1.0 &
+  insertion_face inlet extrude_length 0.05
+
+fix gravity all gravity 9.81 vector 0.0 0.0 -1.0
+fix integrate all nve/sphere
+thermo 5000
+thermo_style custom step atoms ke time
+thermo_modify lost error norm no
+run 100000
+
+write_data comparison-results/common_settled.data
+write_restart comparison-results/common_settled.restart
