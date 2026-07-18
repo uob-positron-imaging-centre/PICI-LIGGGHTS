@@ -1,0 +1,44 @@
+# Save every overlap and total contact force for legacy lookup-table JKR.
+atom_style granular
+atom_modify map array
+boundary f f f
+newton off
+communicate single vel yes
+units si
+
+region domain block -0.02 0.02 -0.01 0.01 -0.01 0.01 units box
+create_box 1 domain
+create_atoms 1 single -0.005 0.0 0.0 units box
+create_atoms 1 single 0.00498 0.0 0.0 units box
+set atom 1 diameter 0.01 density 2500.0
+set atom 2 diameter 0.01 density 2500.0
+group moving id 2
+
+neighbor 0.001 bin
+neigh_modify delay 0 every 1 check no
+fix young all property/global youngsModulus peratomtype 5.0e6
+fix poisson all property/global poissonsRatio peratomtype 0.30
+fix restitution all property/global coefficientRestitution peratomtypepair 1 0.50
+fix friction all property/global coefficientFriction peratomtypepair 1 0.0
+fix adhesion all property/global workOfAdhesion peratomtypepair 1 0.10
+fix resolution all property/global resolutionJKR scalar 1e-4
+pair_style gran model jkr tangential no_history
+pair_coeff * *
+
+compute contact all pair/gran/local id force force_normal delta
+dump state all custom 1 force-component-results/legacy_state.dump id x vx fx
+dump_modify state sort id format "%d %.17g %.17g %.17g"
+dump local all local 1 force-component-results/legacy_contact.dump &
+  c_contact[1] c_contact[2] c_contact[3] c_contact[4] c_contact[5] &
+  c_contact[6] c_contact[7] c_contact[8] c_contact[9] c_contact[10]
+dump_modify local format "%.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g"
+
+fix prescribe moving move linear 0.01 0.0 0.0 units box
+timestep 1.0e-6
+thermo 500
+thermo_style custom step atoms
+thermo_modify lost error norm no
+run 3000
+unfix prescribe
+fix prescribe moving move linear -0.01 0.0 0.0 units box
+run 3000

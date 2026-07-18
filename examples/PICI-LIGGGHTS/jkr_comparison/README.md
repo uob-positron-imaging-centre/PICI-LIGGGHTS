@@ -38,3 +38,16 @@ Generated artifacts are ignored by Git:
 The benchmark constants and repetition counts are intentionally kept at the
 top of `compare_and_benchmark.py`, and model order alternates between measured
 repetitions.
+
+## Total and JKR-only force components
+
+```sh
+python3 plot_force_components.py
+```
+
+This controlled two-sphere unload/reload test saves every overlap and contact
+force for both solvers. Total-force runs use restitution 0.5. A second pair of
+otherwise identical runs uses restitution 1.0, making damping exactly zero so
+the JKR-only force is measured directly rather than inferred. Raw atom and
+`pair/gran/local` dumps, the combined CSV, SVG plots, and a summary are written
+to the ignored `force-component-results/` directory.

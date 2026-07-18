@@ -1,6 +1,7 @@
 validation-results/
 comparison-results/
 benchmark-results/
+force-component-results/
 force_curve.dump
 log.liggghts
 ._*
