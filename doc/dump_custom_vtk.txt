@@ -19,7 +19,7 @@ N = dump every this many timesteps :l
 file = name of file to write dump info to :l
 args = list of arguments for a particular style :l
   {custom/vtk} args = list of atom attributes
-    possible attributes = id, mol, id_multisphere, type, element, mass, density, rho, p
+    possible attributes = id, proc, mol, id_multisphere, type, element, mass, density, rho, p
 			  x, y, z, xs, ys, zs, xu, yu, zu,
 			  xsu, ysu, zsu, ix, iy, iz,
 			  vx, vy, vz, fx, fy, fz,
@@ -29,6 +29,7 @@ args = list of arguments for a particular style :l
 			  c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
       id = atom ID
+      proc = zero-based MPI rank that currently owns the atom
       mol = molecule ID
       id_multisphere = ID of multisphere body
       type = atom type
@@ -60,7 +61,7 @@ args = list of arguments for a particular style :l
 
 [Examples:]
 
-dump dmpvtk all custom/vtk 100 dump*.myforce.vtu id type vx fx
+dump dmpvtk all custom/vtk 100 dump*.myforce.vtu id type proc vx fx
 dump dmpvtp flow custom/vtk 100 dump*.displace.pvtp id type c_myD\[1\] c_myD\[2\] c_myD\[3\] v_ke  :pre
 
 [Description:]
@@ -189,10 +190,13 @@ lz4: Lz4 compression (VTK >= 8.0 required) :pre
 This section explains the atom attributes that can be specified as
 part of the {custom/vtk} style.
 
-The {id}, {mol}, {id_multisphere}, {type}, {element}, {mass}, {vx}, {vy}, {vz}, {fx}, {fy},
+The {id}, {proc}, {mol}, {id_multisphere}, {type}, {element}, {mass}, {vx}, {vy}, {vz}, {fx}, {fy},
 {fz}, {q} attributes are self-explanatory.
 
-{id} is the atom ID.  {mol} is the molecule ID, included in the data
+{id} is the atom ID.  {proc} is the zero-based MPI rank that owns the
+particle when the source rank packs the snapshot; it is an integer from 0 to
+the number of MPI ranks minus one and can be used with {dump_modify thresh}.
+{mol} is the molecule ID, included in the data
 file for molecular systems. {id_multisphere} is the ID of the multisphere
 body that the particle belongs to (if your version supports multisphere). 
 {type} is the atom type.  {element} is
@@ -325,4 +329,3 @@ The {custom/vtk} dump style neither supports buffering nor custom format strings
 
 By default, files are written in ASCII format. If the file extension is not
 one of .vtk, .vtp or .vtu, the legacy VTK file format is used.
-

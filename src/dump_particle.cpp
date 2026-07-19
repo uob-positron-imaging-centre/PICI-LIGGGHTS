@@ -53,6 +53,7 @@
 #endif
 
 #include "atom.h"
+#include "comm.h"
 #include "force.h"
 #include "domain.h"
 #include "region.h"
@@ -100,7 +101,7 @@ using namespace LAMMPS_NS;
 
 enum{X,Y,Z, // required for vtk, must come first
      POINTS_CONVEXHULL, 
-     ID,MOL,TYPE,ELEMENT,MASS,
+     ID,PROC,MOL,TYPE,ELEMENT,MASS,
      XS,YS,ZS,XSTRI,YSTRI,ZSTRI,XU,YU,ZU,XUTRI,YUTRI,ZUTRI,
      XSU,YSU,ZSU,XSUTRI,YSUTRI,ZSUTRI,
      IX,IY,IZ,
@@ -227,6 +228,10 @@ int DumpParticle::parse_parameters(const int narg, const char *const *const arg,
                 pack_choice[ID] = &DumpParticle::pack_id;
                 vtype[ID] = INT;
                 name[ID] = arg[iarg];
+            } else if (strcmp(arg[iarg],"proc") == 0) {
+                pack_choice[PROC] = &DumpParticle::pack_proc;
+                vtype[PROC] = INT;
+                name[PROC] = arg[iarg];
             } else if (strcmp(arg[iarg],"mol") == 0 || strcmp(arg[iarg],"id_multisphere") == 0) {
                 if (!atom->molecule_flag)
                     error->all(FLERR,"Dumping an atom property that isn't allocated");
@@ -862,6 +867,10 @@ int DumpParticle::count()
             if (thresh_array[ithresh] == ID) {
                 int *tag = atom->tag;
                 for (i = 0; i < nlocal; i++) dchoose[i] = tag[i];
+                ptr = dchoose;
+                nstride = 1;
+            } else if (thresh_array[ithresh] == PROC) {
+                for (i = 0; i < nlocal; i++) dchoose[i] = comm->me;
                 ptr = dchoose;
                 nstride = 1;
             } else if (thresh_array[ithresh] == MOL) {
@@ -1992,6 +2001,7 @@ int DumpParticle::modify_param(int narg, char **arg)
         // customize by adding to if statement
 
         if (strcmp(arg[1],"id") == 0) thresh_array[nthresh] = ID;
+        else if (strcmp(arg[1],"proc") == 0) thresh_array[nthresh] = PROC;
         else if (strcmp(arg[1],"mol") == 0 || strcmp(arg[1],"id_multisphere") == 0) thresh_array[nthresh] = MOL;
         else if (strcmp(arg[1],"type") == 0) thresh_array[nthresh] = TYPE;
         else if (strcmp(arg[1],"mass") == 0) thresh_array[nthresh] = MASS;
@@ -2288,6 +2298,16 @@ void DumpParticle::pack_id(int n)
 
     for (int i = 0; i < nchoose; i++) {
         buf[n] = tag[clist[i]];
+        n += size_one;
+    }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpParticle::pack_proc(int n)
+{
+    for (int i = 0; i < nchoose; i++) {
+        buf[n] = comm->me;
         n += size_one;
     }
 }

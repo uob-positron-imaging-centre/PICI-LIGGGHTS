@@ -65,6 +65,7 @@ class Fix : protected Pointers {
   int restart_peratom;           // 1 if Fix saves peratom state, 0 if not
   int restart_file;              // 1 if Fix writes own restart file, 0 if not
   int force_reneighbor;          // 1 if Fix forces reneighboring, 0 if not
+  int pre_exchange_migrate;      // 1 if Fix migrates atoms in pre_exchange
   int box_change_size;           // 1 if Fix changes box size, 0 if not
   int box_change_shape;          // 1 if Fix changes box shape, 0 if not
   int box_change_domain;         // 1 if Fix changes proc sub-domains, 0 if not

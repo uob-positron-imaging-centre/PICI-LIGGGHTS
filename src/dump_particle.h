@@ -191,6 +191,7 @@ class DumpParticle : public Pointers {
     void pack_variable(int);
 
     void pack_id(int);
+    void pack_proc(int);
     void pack_molecule(int);
     void pack_type(int);
     void pack_mass(int);

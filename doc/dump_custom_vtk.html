@@ -183,7 +183,7 @@
 </ul>
 <pre class="literal-block">
 <em>custom/vtk</em> args = list of atom attributes
-  possible attributes = id, mol, id_multisphere, type, element, mass, density, rho, p
+  possible attributes = id, proc, mol, id_multisphere, type, element, mass, density, rho, p
                      x, y, z, xs, ys, zs, xu, yu, zu,
                      xsu, ysu, zsu, ix, iy, iz,
                      vx, vy, vz, fx, fy, fz,
@@ -194,6 +194,7 @@
 </pre>
 <pre class="literal-block">
 id = atom ID
+proc = zero-based MPI rank that currently owns the atom
 mol = molecule ID
 id_multisphere = ID of multisphere body
 type = atom type
@@ -225,7 +226,7 @@ quat1, quat2, quat3, quat4 = quaternion components for superquadric paricles
 </div>
 <div class="section" id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre>dump dmpvtk all custom/vtk 100 dump*.myforce.vtu id type vx fx
+<div class="highlight-python"><div class="highlight"><pre>dump dmpvtk all custom/vtk 100 dump*.myforce.vtu id type proc vx fx
 dump dmpvtp flow custom/vtk 100 dump*.displace.pvtp id type c_myD[1] c_myD[2] c_myD[3] v_ke
 </pre></div>
 </div>
@@ -342,9 +343,13 @@ lz4: Lz4 compression (VTK &gt;= 8.0 required)
 <hr class="docutils" />
 <p>This section explains the atom attributes that can be specified as
 part of the <em>custom/vtk</em> style.</p>
-<p>The <em>id</em>, <em>mol</em>, <em>id_multisphere</em>, <em>type</em>, <em>element</em>, <em>mass</em>, <em>vx</em>, <em>vy</em>, <em>vz</em>, <em>fx</em>, <em>fy</em>,
+<p>The <em>id</em>, <em>proc</em>, <em>mol</em>, <em>id_multisphere</em>, <em>type</em>, <em>element</em>, <em>mass</em>, <em>vx</em>, <em>vy</em>, <em>vz</em>, <em>fx</em>, <em>fy</em>,
 <em>fz</em>, <em>q</em> attributes are self-explanatory.</p>
-<p><em>id</em> is the atom ID.  <em>mol</em> is the molecule ID, included in the data
+<p><em>id</em> is the atom ID.  <em>proc</em> is the zero-based MPI rank that owns
+the particle when the source rank packs the snapshot.  It is an integer from
+zero through the number of MPI ranks minus one and supports
+<a class="reference internal" href="dump_modify_vtk.html"><em>dump_modify thresh</em></a>.
+<em>mol</em> is the molecule ID, included in the data
 file for molecular systems. <em>id_multisphere</em> is the ID of the multisphere
 body that the particle belongs to (if your version supports multisphere).
 <em>type</em> is the atom type.  <em>element</em> is

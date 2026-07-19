@@ -93,6 +93,7 @@ Fix::Fix(LAMMPS *lmp, int narg, char **arg) :
 
   restart_global = restart_peratom = restart_file = 0;
   force_reneighbor = 0;
+  pre_exchange_migrate = 0;
   box_change_size = box_change_shape = box_change_domain = 0;
   thermo_energy = 0;
   rigid_flag = 0;

@@ -1,0 +1,82 @@
+"LIGGGHTS(R)-PUBLIC WWW Site"_liws - "LIGGGHTS(R)-PUBLIC Documentation"_ld - "LIGGGHTS(R)-PUBLIC Commands"_lc :c
+
+:link(liws,http://www.cfdem.com)
+:link(ld,Manual.html)
+:link(lc,Section_commands.html#comm)
+
+:line
+
+fix balance command :h3
+
+[Syntax:]
+
+fix ID group-ID balance Nfreq thresh shift dimstr Niter stopthresh :pre
+
+ID, group-ID are documented in the "fix"_fix.html command
+balance = style name of this fix command
+Nfreq = load-balance check interval in timesteps
+thresh = imbalance factor that triggers balancing
+shift = shifted Cartesian cutting-plane algorithm
+dimstr = unique sequence of x, y, and z dimensions
+Niter = maximum multisection iterations per dimension
+stopthresh = target imbalance factor (1.0 or greater) :ul
+
+[Examples:]
+
+fix lb all balance 1000 1.10 shift xyz 10 1.05
+fix lb all balance 0 1.05 shift xy 20 1.01 :pre
+
+[Description:]
+
+This fix dynamically changes the Cartesian processor subdomain boundaries so
+that each MPI rank owns approximately the same number of particles.  The MPI
+processor-grid topology is unchanged; only its cutting planes move.  All
+particles participate.  The fix group is accepted for compatibility but is
+ignored.
+
+The imbalance factor is the maximum number of locally owned particles on any
+rank divided by the average number per rank.  Balancing occurs when this value
+is greater than {thresh}.  A value below 1.0 therefore forces a balance check to
+perform redistribution.
+
+If {Nfreq} is positive, a neighbor rebuild and balance check is forced on exact
+multiples of {Nfreq}.  If {Nfreq} is zero, the imbalance is checked whenever a
+normal neighbor rebuild occurs.  An initial check is also made during Verlet
+setup.
+
+For each character in {dimstr}, density-dependent multisection moves the
+interior processor planes.  {Niter} limits the number of iterations per
+dimension, and iteration stops early if the projected imbalance reaches
+{stopthresh}.  Triclinic boxes use reduced coordinates.  Generated splits must
+remain finite, strictly ordered, and nonzero in width.
+
+On redistribution all AtomVec and registered per-atom fix state is migrated,
+including contact history and thermal properties.  Communication borders,
+neighbor/contact lists, multisphere ownership, and mesh ownership are rebuilt
+through the normal Verlet lifecycle.
+
+[Restart, fix_modify, output, run start/stop, minimize info:]
+
+The shifted split arrays are not written to restart files.  Define this fix
+again after reading a restart to resume dynamic balancing.  A write_data or
+write_restart command does not itself trigger balancing.
+
+This fix computes a global scalar and a global vector of length 3.  The scalar
+is the post-balance imbalance.  Vector entries are the maximum particle count
+on one rank, the number of multisection iterations used by the last check, and
+the pre-balance imbalance.  These values are intensive.
+
+No fix_modify option or run start/stop keyword applies.  This fix is not
+available during minimization.
+
+[Restrictions:]
+
+Only particle-count balancing with {shift} is implemented.  Wedge domains,
+non-Verlet and CUDA run styles, multiple balance fixes, and PASCAL
+exchange-event coupling are not supported.  In 2d, {dimstr} cannot contain z.
+
+[Related commands:]
+
+"processors"_processors.html, "dump custom/vtk"_dump_custom_vtk.html
+
+[Default:] none

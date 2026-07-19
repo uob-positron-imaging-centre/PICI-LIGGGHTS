@@ -1,0 +1,25 @@
+units si
+dimension 3
+atom_style atomic
+boundary f f f
+
+processors 4 1 1
+region domain block 0 10 0 1 0 1 units box
+create_box 1 domain
+region loaded block 0 2 0 1 0 1 units box
+create_atoms 1 random 1000 48271 loaded
+mass 1 1.0
+
+pair_style none
+atom_modify sort 0 0.0
+neighbor 0.05 bin
+neigh_modify delay 0 every 1 check yes
+
+fix lb all balance 1 1.10 shift x 20 1.05
+
+dump ranks all custom/vtk 1 particles_*.vtu id type proc x y z
+# dump_modify ranks thresh proc == 0
+
+thermo 1
+thermo_style custom step atoms f_lb f_lb[1] f_lb[2] f_lb[3]
+run 2

@@ -1335,8 +1335,8 @@ void Modify::list_init(int mask, int &n, int *&list)
 }
 
 /* ----------------------------------------------------------------------
-   create list of fix indices for for pre_exchange fixes
-   have contacthistory fixes always come first so it can copy the data
+   create list of fix indices for pre_exchange fixes
+   contact histories copy their data first, atom-migrating fixes run last
 ------------------------------------------------------------------------- */
 
 void Modify::list_init_pre_exchange(int mask, int &n, int *&list)
@@ -1356,14 +1356,13 @@ void Modify::list_init_pre_exchange(int mask, int &n, int *&list)
         list[n++] = i;
   }
 
-  for (int i = 0; i < nfix; i++)
-  {
-      if(0 == strncmp(fix[i]->style,"contacthistory",14))
-      //if(0 == strcmp(fix[i]->style,"contacthistory"))
-        continue;
-
-      if (fmask[i] & mask) list[n++] = i;
+  for (int i = 0; i < nfix; i++) {
+    if (0 == strncmp(fix[i]->style,"contacthistory",14)) continue;
+    if ((fmask[i] & mask) && !fix[i]->pre_exchange_migrate) list[n++] = i;
   }
+
+  for (int i = 0; i < nfix; i++)
+    if ((fmask[i] & mask) && fix[i]->pre_exchange_migrate) list[n++] = i;
 }
 
 /* ----------------------------------------------------------------------

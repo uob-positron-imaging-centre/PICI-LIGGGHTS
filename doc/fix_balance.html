@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fix balance command &mdash; LIGGGHTS v3.X documentation</title>
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+</head>
+<body class="wy-body-for-nav">
+<div class="wy-grid-for-nav"><section class="wy-nav-content-wrap"><div class="wy-nav-content"><div class="rst-content">
+<div class="section" id="fix-balance-command">
+<h1>fix balance command</h1>
+<h2>Syntax</h2>
+<pre>fix ID group-ID balance Nfreq thresh shift dimstr Niter stopthresh</pre>
+<h2>Examples</h2>
+<pre>fix lb all balance 1000 1.10 shift xyz 10 1.05
+fix lb all balance 0 1.05 shift xy 20 1.01</pre>
+<h2>Description</h2>
+<p>This fix dynamically shifts Cartesian processor subdomain boundaries so
+each MPI rank owns approximately the same number of particles.  The processor
+grid topology is unchanged and the fix group is accepted but ignored.</p>
+<p>The trigger is max(nlocal)/average(nlocal).  Positive <em>Nfreq</em> values
+force checks on exact multiples; zero checks on normal neighbor rebuilds.  An
+initial Verlet setup check is also made.</p>
+<p>The unique characters in <em>dimstr</em> select axes for density-dependent
+multisection.  <em>Niter</em> is the per-axis iteration limit and
+<em>stopthresh</em> is the convergence target.  Triclinic boxes use reduced
+coordinates and all cuts remain finite, ordered, and nonzero in width.</p>
+<p>Redistribution migrates registered per-particle state, then rebuilds normal
+communication, contact, neighbor, multisphere, and mesh ownership data.</p>
+<h2>Restart and output</h2>
+<p>Split arrays are not stored in restart files.  Output commands do not trigger
+balancing.  The scalar is post-balance imbalance; vector entries are maximum
+particles on one rank, iteration count, and pre-balance imbalance.</p>
+<h2>Restrictions</h2>
+<p>Only particle-count <em>shift</em> balancing is supported.  Wedge domains,
+non-Verlet or CUDA runs, minimization, multiple balance fixes, PASCAL
+exchange-event coupling, and z balancing in 2d are rejected.</p>
+<p>Related commands: <a href="processors.html">processors</a>,
+<a href="dump_custom_vtk.html">dump custom/vtk</a>.</p>
+</div></div></div></section></div>
+</body>
+</html>

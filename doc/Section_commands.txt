@@ -194,6 +194,7 @@ of each style or click on the style itself for a full description:
 "ave/spatial"_fix_ave_spatial.html,
 "ave/time"_fix_ave_time.html,
 "aveforce"_fix_aveforce.html,
+"balance"_fix_balance.html,
 "bond/break"_fix_bond_break.html,
 "bond/create"_fix_bond_create.html,
 "box/relax"_fix_box_relax.html,
@@ -281,4 +282,3 @@ potentials.  Click on the style itself for a full description:
 "none"_pair_none.html,
 "soft"_pair_soft.html,
 "sph/artVisc/tensCorr"_pair_sph_artvisc_tenscorr.html :tb(c=4,ea=c)
-

@@ -107,7 +107,7 @@ using namespace LAMMPS_NS;
 
 enum{X,Y,Z, // required for vtk, must come first
      POINTS_CONVEXHULL, 
-     ID,MOL,TYPE,ELEMENT,MASS,
+     ID,PROC,MOL,TYPE,ELEMENT,MASS,
      XS,YS,ZS,XSTRI,YSTRI,ZSTRI,XU,YU,ZU,XUTRI,YUTRI,ZUTRI,
      XSU,YSU,ZSU,XSUTRI,YSUTRI,ZSUTRI,
      IX,IY,IZ,
