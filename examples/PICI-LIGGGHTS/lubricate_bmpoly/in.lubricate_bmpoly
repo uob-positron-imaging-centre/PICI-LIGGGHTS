@@ -1,0 +1,39 @@
+# Two unequal spheres in a short-range hydrodynamic lubrication field.
+# The pair style supplies lubrication force and torque only; it is not a
+# mechanical contact model.
+
+atom_style      granular
+atom_modify     map array
+boundary        f f f
+newton          off
+communicate     single vel yes
+units           si
+
+region          domain block 0.0 0.01 0.0 0.01 0.0 0.01 units box
+create_box      2 domain
+create_atoms    1 single 0.00400 0.00500 0.00500 units box
+create_atoms    2 single 0.00524 0.00500 0.00500 units box
+
+# Radii are 0.5 mm and 0.7 mm.  The initial surface gap is 40 micrometres.
+set             atom 1 diameter 0.0010 density 2500.0 vx  0.0010 vy  0.0002 omegaz  10.0
+set             atom 2 diameter 0.0014 density 2500.0 vx -0.0007 vy -0.0001 omegaz -5.0
+
+neighbor        0.0001 bin
+neigh_modify    delay 0 every 1 check no
+
+# mu flaglog flagfld cutinner cutoff flagHI flagVF
+# The two cutoffs are surface-to-surface gaps, not centre distances.
+pair_style      lubricate/bmpoly 0.001 1 1 1.0e-6 5.0e-5 1 1
+pair_coeff      * *
+
+fix             integrate all nve/sphere
+compute         kinetic all ke
+
+timestep        1.0e-7
+thermo          20
+thermo_style    custom step atoms c_kinetic
+thermo_modify   lost error norm no
+dump            state all custom 20 lubrication.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius
+dump_modify     state sort id
+
+run             200

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pair_style lubricate/bmpoly command &mdash; LIGGGHTS documentation</title>
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css">
+</head>
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          <a href="Manual.html" class="icon icon-home"> LIGGGHTS</a>
+        </div>
+        <div class="wy-menu wy-menu-vertical" role="navigation">
+          <ul>
+            <li><a href="Section_commands.html">Commands</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation"><a href="Manual.html">LIGGGHTS</a></nav>
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+            <ul class="wy-breadcrumbs">
+              <li><a href="Manual.html">Docs</a> &raquo;</li>
+              <li>pair_style lubricate/bmpoly command</li>
+            </ul>
+            <hr>
+          </div>
+          <div role="main" class="document">
+            <div itemprop="articleBody">
+              <div class="section" id="pair-style-lubricate-bmpoly-command">
+                <h1>pair_style lubricate/bmpoly command</h1>
+
+                <div class="section" id="syntax">
+                  <h2>Syntax</h2>
+                  <div class="highlight-python"><div class="highlight"><pre>pair_style lubricate/bmpoly mu flaglog flagfld cutinner cutoff [flagHI flagVF]
+pair_coeff I J [cutinner cutoff]</pre></div></div>
+                  <p>All arguments are numeric. The optional <code>flagHI</code>
+                  and <code>flagVF</code> arguments default to 1. The two cutoff
+                  values are surface-to-surface gaps, not centre-to-centre
+                  distances.</p>
+
+                  <table class="docutils">
+                    <thead>
+                      <tr><th>Argument</th><th>Meaning</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td><code>mu</code></td><td>Dynamic viscosity of the suspending fluid. It is positive and is expressed in the current LIGGGHTS unit system; for <code>units si</code>, use Pa s.</td></tr>
+                      <tr><td><code>flaglog</code></td><td><code>0</code> omits the logarithmic resistance terms; <code>1</code> includes them. The normal inverse-gap term is retained in both modes.</td></tr>
+                      <tr><td><code>flagfld</code></td><td><code>0</code> disables background-fluid drag, rotational drag, and stresslet; <code>1</code> enables them.</td></tr>
+                      <tr><td><code>cutinner</code></td><td>Positive minimum gap used in the resistance law. Gaps below this value, including overlap, are clamped to this value.</td></tr>
+                      <tr><td><code>cutoff</code></td><td>Positive maximum surface gap for pairwise lubrication. Pairs with a larger gap are skipped.</td></tr>
+                      <tr><td><code>flagHI</code></td><td><code>0</code> disables pairwise hydrodynamic interactions; <code>1</code> evaluates the pair resistance law. If <code>flaglog=1</code>, the implementation forces this flag to 1 because the logarithmic terms require the pair interaction.</td></tr>
+                      <tr><td><code>flagVF</code></td><td><code>0</code> uses the dilute background coefficients; <code>1</code> applies the volume-fraction correction to the background coefficients.</td></tr>
+                      <tr><td><code>I J</code></td><td>Atom-type pair for <code>pair_coeff</code>. The optional pair-specific <code>cutinner cutoff</code> overrides the global values.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="section" id="description">
+                  <h2>Description</h2>
+                  <p><code>lubricate/bmpoly</code> implements the unequal-sphere
+                  short-range hydrodynamic resistance model described by O.
+                  Cheal and C. Ness, <a href="https://arxiv.org/abs/1801.03805">Rheology of dense granular suspensions under extensional flow</a>,
+                  arXiv:1801.03805v3. It is a lubrication contribution for
+                  spherical particles in a Newtonian suspending fluid. It does
+                  not replace a granular contact law.</p>
+
+                  <h3 id="geometry-and-notation">Geometry and notation</h3>
+                  <p>The following definitions apply to one ordered pair,
+                  called particles 1 and 2. The implementation evaluates the
+                  same relation over a full neighbour list with
+                  <code>newton off</code>.</p>
+                  <table class="docutils">
+                    <thead>
+                      <tr><th>Symbol</th><th>Definition</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td><code>a1</code>, <code>a2</code></td><td>Radii of particles 1 and 2. They must be positive.</td></tr>
+                      <tr><td><code>r1</code>, <code>r2</code></td><td>Particle-centre position vectors.</td></tr>
+                      <tr><td><code>r = r1 - r2</code></td><td>Separation vector, pointing from particle 2 to particle 1.</td></tr>
+                      <tr><td><code>d = |r|</code></td><td>Centre-to-centre separation.</td></tr>
+                      <tr><td><code>h = d - a1 - a2</code></td><td>Physical surface-to-surface gap before clamping.</td></tr>
+                      <tr><td><code>hmodel</code></td><td>Gap used by the model: <code>max(h,cutinner)</code>, provided <code>h &lt; cutoff</code>.</td></tr>
+                      <tr><td><code>n = r/d</code></td><td>Unit vector from particle 2 to particle 1.</td></tr>
+                      <tr><td><code>xi = 2 hmodel/(a1+a2)</code></td><td>Dimensionless gap used in the asymptotic resistance functions.</td></tr>
+                      <tr><td><code>beta = a2/a1</code></td><td>Radius ratio. The formulas are valid for unequal spheres and reduce to the equal-radius case when <code>beta=1</code>.</td></tr>
+                      <tr><td><code>U1</code>, <code>U2</code></td><td>Translational particle velocities.</td></tr>
+                      <tr><td><code>Omega1</code>, <code>Omega2</code></td><td>Angular particle velocities.</td></tr>
+                      <tr><td><code>DeltaU = U2-U1</code></td><td>Relative translational velocity used by the pair resistance law.</td></tr>
+                      <tr><td><code>I</code></td><td>3 by 3 identity tensor.</td></tr>
+                      <tr><td><code>n otimes n</code></td><td>Dyadic product of <code>n</code> with itself.</td></tr>
+                      <tr><td><code>P = I - n otimes n</code></td><td>Projector onto the plane normal to <code>n</code>.</td></tr>
+                      <tr><td><code>ln</code></td><td>Natural logarithm. The code uses <code>L = ln(1/xi)</code> when <code>flaglog=1</code>.</td></tr>
+                    </tbody>
+                  </table>
+                  <p>The neighbour-list centre-distance cutoff is the selected
+                  surface cutoff plus the radii of the two types. Consequently,
+                  <code>cutinner</code> and <code>cutoff</code> should be chosen
+                  in length units and should be small compared with the particle
+                  radii. A pair is evaluated only when its physical gap is below
+                  <code>cutoff</code>; its gap is then clamped before evaluating
+                  <code>xi</code>.</p>
+
+                  <h3 id="pairwise-force-and-torque">Pairwise force and torque</h3>
+                  <p>With the coefficient definitions below, the coefficients
+                  already contain <code>mu</code>. The force and torque on
+                  particle 1 are therefore:</p>
+                  <div class="highlight-python"><div class="highlight"><pre>F1h = XA11 n (n . DeltaU) + YA11 P . DeltaU
+      + YB11 (Omega1 x n) + YB21 (Omega2 x n)
+
+G1h = YB11 (DeltaU x n)
+      - P . (YC11 Omega1 + YC12 Omega2)</pre></div></div>
+                  <p><code>F1h</code> is the hydrodynamic force vector,
+                  <code>G1h</code> is the hydrodynamic torque vector,
+                  <code>.</code> is tensor-vector or dot contraction, and
+                  <code>x</code> is the three-dimensional cross product. The
+                  corresponding contribution for particle 2 is evaluated by the
+                  full-list traversal with the particle labels exchanged.</p>
+
+                  <h3 id="resistance-coefficients">Resistance coefficients</h3>
+                  <p>Let <code>L=ln(1/xi)</code> when <code>flaglog=1</code>, and
+                  <code>L=0</code> when <code>flaglog=0</code>. The six
+                  unequal-sphere Bidisperse-Monodisperse polynomial coefficients
+                  used by the implementation are:</p>
+                  <table class="docutils">
+                    <thead>
+                      <tr><th>Coefficient</th><th>Definition</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td><code>XA11</code></td><td><code>6 pi mu a1 [ 2 beta^2/((1+beta)^3 xi) + beta(1+7 beta+beta^2)L/(5(1+beta)^3) ]</code></td></tr>
+                      <tr><td><code>YA11</code></td><td><code>6 pi mu a1 [ 4 beta(2+beta+2 beta^2)L/(15(1+beta)^3) ]</code></td></tr>
+                      <tr><td><code>YB11</code></td><td><code>-4 pi mu a1^2 [ beta(4+beta)L/(5(1+beta)^2) ]</code></td></tr>
+                      <tr><td><code>YB21</code></td><td><code>-4 pi mu a2^2 [ beta^(-1)(4+beta^(-1))L/(5(1+beta^(-1))^2) ]</code></td></tr>
+                      <tr><td><code>YC11</code></td><td><code>8 pi mu a1^3 [ 2 beta L/(5(1+beta)) ]</code></td></tr>
+                      <tr><td><code>YC12</code></td><td><code>8 pi mu a1^3 [ beta L/(10(1+beta)) ]</code></td></tr>
+                    </tbody>
+                  </table>
+                  <p><code>pi</code> is the mathematical constant. The
+                  dimensions follow from the powers of radius: the
+                  <code>XA11</code> and <code>YA11</code> terms multiply a
+                  velocity, the <code>YB</code> terms couple rotation and
+                  translation, and the <code>YC</code> terms multiply angular
+                  velocity to produce torque. In particular, <code>YC12</code>
+                  uses <code>beta</code>, not <code>beta^2</code>.</p>
+
+                  <h3 id="background-fluid-field">Background-fluid field</h3>
+                  <p>When <code>flagfld=1</code>, an isolated particle also
+                  receives background-fluid resistance. For particle <code>i</code>
+                  with radius <code>ai</code>:</p>
+                  <div class="highlight-python"><div class="highlight"><pre>Fi^fld = -R0 ai (Ui - Uinf)
+Gi^fld = -RT0 ai^3 (Omegai - Omegainf)
+Si^fld = -RS0 ai^3 Einf</pre></div></div>
+                  <p>Here <code>Uinf</code> is the local background-fluid
+                  translational velocity, <code>Omegainf</code> is its local
+                  angular velocity, <code>Einf</code> is its symmetric rate-of-
+                  strain tensor, and <code>Si^fld</code> is the stresslet
+                  contribution tallied in the stress/virial calculation. In a
+                  fixed, undeformed box these field values are zero. With
+                  <code>fix deform ... remap v</code>, they are obtained from the
+                  imposed box deformation.</p>
+                  <p><code>R0</code>, <code>RT0</code>, and <code>RS0</code>
+                  already include <code>mu</code>. Their volume-fraction
+                  correction is controlled by <code>phi</code>:</p>
+                  <div class="highlight-python"><div class="highlight"><pre>volP = sum_i (4 pi ai^3 / 3)
+volT = available box or supported wall-enclosed volume
+phi  = volP/volT when flagVF=1, otherwise 0
+
+flaglog = 0:
+  R0  = 6 pi mu (1 + 2.16 phi)
+  RT0 = 8 pi mu
+  RS0 = (20/3) pi mu (1 + 3.33 phi + 2.80 phi^2)
+
+flaglog = 1:
+  R0  = 6 pi mu (1 + 2.725 phi - 6.583 phi^2)
+  RT0 = 8 pi mu (1 + 0.749 phi - 2.469 phi^2)
+  RS0 = (20/3) pi mu (1 + 3.64 phi - 6.95 phi^2)</pre></div></div>
+                  <p><code>volP</code> is the total particle volume and
+                  <code>volT</code> is the available fluid volume. The optional
+                  volume calculation recognizes the legacy <code>fix wall</code>
+                  interface; granular wall fixes are not used for this
+                  correction.</p>
+
+                  <h3 id="numerical-and-units-notes">Numerical and units notes</h3>
+                  <ul>
+                    <li>The model is a short-range asymptotic resistance law. It is not a finite-gap fluid solver.</li>
+                    <li><code>cutinner</code> regularizes the singular inverse-gap resistance. It is a numerical/model cutoff, not a physical contact distance.</li>
+                    <li>The equations above are written in physical current-unit form; the implementation applies LIGGGHTS' normal internal unit-conversion factor when accumulating forces, torques, and stress.</li>
+                    <li>The pair style applies no Hertz, Hooke, friction, collision, or overlap-restoring force. Use <code>pair_style hybrid/overlay</code> when a granular contact model must be combined with lubrication.</li>
+                    <li>Because the style uses a full neighbour list and evaluates ghost velocities, use <code>newton off</code> and <code>communicate single vel yes</code>.</li>
+                    <li>If the simulation can create overlap, choose a mechanical contact model and timestep independently of the lubrication cutoff. The lubrication clamp alone does not prevent overlap.</li>
+                  </ul>
+                </div>
+
+                <div class="section" id="restrictions">
+                  <h2>Restrictions</h2>
+                  <p>The pair style requires a spherical atom style such as
+                  <code>atom_style granular</code> or <code>atom_style sphere</code>
+                  with positive radii, angular velocities, and torques. Use:</p>
+                  <div class="highlight-python"><div class="highlight"><pre>newton off
+communicate single vel yes</pre></div></div>
+                  <p>If <code>fix deform</code> is used, it must use
+                  <code>remap v</code>. Only one legacy <code>fix wall</code>
+                  command is supported for the finite-volume correction.</p>
+                  <p>See the matching source documentation in
+                  <a href="_sources/pair_lubricate_bmpoly.txt">pair_lubricate_bmpoly.txt</a>,
+                  the lubrication-only example in
+                  <a href="../examples/PICI-LIGGGHTS/lubricate_bmpoly/in.lubricate_bmpoly">examples/PICI-LIGGGHTS/lubricate_bmpoly/in.lubricate_bmpoly</a>,
+                  and the granular-overlay example in
+                  <a href="../examples/PICI-LIGGGHTS/lubricate_bmpoly/granular_plus_lubrication/in.granular_plus_lubrication">examples/PICI-LIGGGHTS/lubricate_bmpoly/granular_plus_lubrication/in.granular_plus_lubrication</a>.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <footer></footer>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,183 @@
+"LIGGGHTS(R)-PUBLIC WWW Site"_liws - "LIGGGHTS(R)-PUBLIC Documentation"_ld - "LIGGGHTS(R)-PUBLIC Commands"_lc :c
+
+:link(liws,http://www.cfdem.com)
+:link(ld,Manual.html)
+:link(lc,Section_commands.html#comm)
+
+:line
+
+pair_style lubricate/bmpoly command :h3
+
+[Syntax:]
+
+pair_style lubricate/bmpoly mu flaglog flagfld cutinner cutoff &
+  [flagHI flagVF] :pre
+
+pair_coeff I J [cutinner cutoff] :pre
+
+mu = suspending-fluid dynamic viscosity :ul
+flaglog = include logarithmic resistance terms (0 or 1)
+flagfld = include background-fluid drag, rotation drag, and stresslet (0 or 1)
+cutinner = minimum surface-to-surface gap used in the resistance law
+cutoff = maximum surface-to-surface gap for lubrication interactions
+flagHI = include pairwise hydrodynamic interactions (0 or 1)
+flagVF = apply the finite-volume-fraction correction to background drag (0 or 1) :ul
+
+The optional {flagHI} and {flagVF} values default to 1.  The command requires
+0 < {cutinner} <= {cutoff}.  The cutoff values for this style are gaps between
+surfaces.  Internally, the neighbour-list cutoff is the selected gap plus the
+two particle radii.
+
+[Examples:]
+
+pair_style lubricate/bmpoly 0.001 1 1 1.0e-6 5.0e-5 1 1
+pair_coeff * * :pre
+
+See `examples/PICI-LIGGGHTS/lubricate_bmpoly/` for a runnable lubrication-only
+case and its `granular_plus_lubrication/` subdirectory for a
+`hybrid/overlay` example.
+
+[Description:]
+
+Style {lubricate/bmpoly} implements the unequal-sphere resistance functions
+given by Cheal and Ness, "Rheology of dense granular suspensions under
+extensional flow", arXiv:1801.03805v3.  It is a short-range resistance model
+for spherical particles in a Newtonian suspending fluid.
+
+For one ordered pair, particles 1 and 2 have radii {a1} and {a2}, centre
+positions {r1} and {r2}, translational velocities {U1} and {U2}, and angular
+velocities {Omega1} and {Omega2}.  The geometric variables are
+
+{r} = {r1} - {r2}
+{d} = |{r}|
+{h} = {d} - {a1} - {a2}
+{hmodel} = max({h},{cutinner})
+{n} = {r}/{d}
+{xi} = 2 {hmodel}/({a1}+{a2})
+{beta} = {a2}/{a1}
+{DeltaU} = {U2}-{U1}
+{I} = identity tensor
+{P} = {I} - {n} otimes {n}
+{L} = log(1/{xi}) when {flaglog}=1, otherwise 0 :pre
+
+Here {h} is the physical surface-to-surface gap.  A pair is skipped when
+{h} >= {cutoff}; otherwise {hmodel} is used in the resistance law.  Thus an
+overlap is not a contact force: it is merely evaluated at the regularising
+gap {cutinner}.  The vector {n} points from particle 2 to particle 1, {I} is
+the 3 by 3 identity, {n} otimes {n} is a dyadic product, and {P} projects
+onto the plane normal to {n}.  The dot denotes contraction, the cross denotes
+the three-dimensional cross product, and {log} is the natural logarithm.
+
+The coefficients below include {mu}; therefore the pair force and torque on
+particle 1 are
+
+F1h = XA11 {n} ({n} . {DeltaU}) + YA11 {P} . {DeltaU}
+      + YB11 ({Omega1} x {n}) + YB21 ({Omega2} x {n})
+
+Gamma1h = YB11 ({DeltaU} x {n})
+          - {P} . (YC11 {Omega1} + YC12 {Omega2}) :pre
+
+The six unequal-sphere Bidisperse-Monodisperse polynomial coefficients are
+
+XA11 = 6 pi {mu} {a1} [ 2 {beta}^2/((1+{beta})^3 {xi})
+       + {beta}(1+7 {beta}+{beta}^2) {L}/(5(1+{beta})^3) ]
+
+YA11 = 6 pi {mu} {a1} [ 4 {beta}(2+{beta}+2 {beta}^2) {L}
+       /(15(1+{beta})^3) ]
+
+YB11 = -4 pi {mu} {a1}^2 [ {beta}(4+{beta}) {L}
+       /(5(1+{beta})^2) ]
+
+YB21 = -4 pi {mu} {a2}^2 [ {beta}^-1(4+{beta}^-1) {L}
+       /(5(1+{beta}^-1)^2) ]
+
+YC11 = 8 pi {mu} {a1}^3 [ 2 {beta} {L}/(5(1+{beta})) ]
+
+YC12 = 8 pi {mu} {a1}^3 [ {beta} {L}/(10(1+{beta})) ] :pre
+
+Here {pi} is the mathematical constant and {mu} is the fluid dynamic
+viscosity.  When {flaglog}=0, {L}=0, so all logarithmic terms vanish while
+the inverse-{xi} term in {XA11} remains.  The cross-rotation coefficient
+{YC12} uses {beta}, not {beta}^2.
+
+When {flagfld}=1, particle {i} with radius {ai} also receives background-field
+terms:
+
+Fifld = -R0 {ai} ({Ui}-{Uinf})
+Gammaifld = -RT0 {ai}^3 ({Omegai}-{Omegainf})
+Sifld = -RS0 {ai}^3 {Einf} :pre
+
+{Uinf} is the local background-fluid velocity, {Omegainf} is its local angular
+velocity, {Einf} is the symmetric rate-of-strain tensor, and {Sifld} is the
+stresslet contribution tallied in the stress/virial calculation.  These field
+values are zero in a fixed undeformed box.  With {fix deform remap v}, they are
+obtained from the imposed box deformation.
+
+The background coefficients already include {mu}.  Let
+
+{volP} = sum_i 4 pi {ai}^3/3
+{volT} = available box or supported legacy-wall volume
+{phi} = {volP}/{volT} when {flagVF}=1, otherwise 0 :pre
+
+For {flaglog}=0:
+
+R0 = 6 pi {mu} (1 + 2.16 {phi})
+RT0 = 8 pi {mu}
+RS0 = (20/3) pi {mu} (1 + 3.33 {phi} + 2.80 {phi}^2) :pre
+
+For {flaglog}=1:
+
+R0 = 6 pi {mu} (1 + 2.725 {phi} - 6.583 {phi}^2)
+RT0 = 8 pi {mu} (1 + 0.749 {phi} - 2.469 {phi}^2)
+RS0 = (20/3) pi {mu} (1 + 3.64 {phi} - 6.95 {phi}^2) :pre
+
+The pair style uses the current LIGGGHTS unit system.  In {units si}, {mu}
+is in Pa s, radii and gaps are in metres, velocities are in metres per second,
+and angular velocities are in radians per second.  The same dimensional
+relationships apply in other unit systems.  The implementation applies the
+normal LIGGGHTS internal unit-conversion factor when accumulating forces,
+torques, and stress.
+
+This style calculates hydrodynamic forces and torques only.  It does not
+provide a mechanical contact force, friction law, or collision regularisation.
+If the simulation can bring particles into overlap, use a validated mechanical
+contact model in addition to this hydrodynamic contribution.
+
+The model is a short-range asymptotic resistance law.  The paper uses a
+minimum gap of 0.001 particle radii and neglects interactions beyond about
+0.05 particle radii.  Choose {cutinner} and {cutoff} accordingly and do not
+interpret the style as a general finite-gap hydrodynamics model.  The pair
+style supplies no Hertz, Hooke, friction, collision, or overlap-restoring
+force.  Use {pair_style hybrid/overlay} to combine it with a granular contact
+model when overlap is possible.
+
+:line
+
+[Mixing, shift, table, tail correction, restart, rRESPA info:]
+
+For unset type pairs, the inner and outer gap cutoffs are mixed geometrically.
+The pair style writes its settings and per-type-pair gap cutoffs to binary
+restart files.  Shift, table, and tail corrections are not relevant.  The
+style uses a full neighbour list and is not an rRESPA pair-style component.
+
+:line
+
+[Restrictions:]
+
+The pair style requires {atom_style granular} or another spherical atom style
+with positive per-atom radii, angular velocity, and torque storage.  Use
+
+newton off
+communicate single vel yes :pre
+
+If {fix deform} is used, it must use the {remap v} option.  Only the legacy
+{fix wall} interface is recognized for the finite-volume correction; granular
+wall fixes are not cast to that interface.
+
+[Related commands:]
+
+"pair_coeff"_pair_coeff.html, "atom_style"_atom_style.html,
+"communicate"_communicate.html, "newton"_newton.html,
+"fix deform"_fix_deform.html, "pair hybrid/overlay"_pair_hybrid.html
+
+[Default:] none
