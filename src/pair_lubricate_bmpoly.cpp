@@ -166,8 +166,25 @@ void PairLubricateBmpoly::init_style()
 
 void PairLubricateBmpoly::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  // fprintf(stderr,
+  //           "DEBUG ENTRY: rank=%d eflag=%d vflag=%d\n",
+  //           comm->me, eflag, vflag);
+
+  if (eflag || vflag) {
+      ev_setup(eflag,vflag);
+  } else {
+      evflag = vflag_fdotr = 0;
+  }
+
+  // fprintf(stderr,
+  //         "DEBUG SETUP: rank=%d "
+  //         "vflag_either=%d vflag_global=%d vflag_atom=%d\n",
+  //         comm->me, vflag_either, vflag_global, vflag_atom);
+
+  if (vflag_atom < 0 || vflag_atom > 1) {
+      error->all(FLERR,
+                  "Unexpected vflag_atom after ev_setup in lubricate/bmpoly");
+  }
 
   if (flagVF && (flagdeform || flagwall == 2))
     update_fld_coefficients();
@@ -235,10 +252,21 @@ void PairLubricateBmpoly::compute(int eflag, int vflag)
       torque[i][2] -= vxmu2f*RT0*radi*radi*radi*(omega[i][2] - wf[2]);
 
       if (shearing && vflag_either) {
-        double vRS0 = -vxmu2f*RS0*radi*radi*radi;
-        v_tally_tensor(i,i,nlocal,newton_pair,
-                       vRS0*Ef[0][0],vRS0*Ef[1][1],vRS0*Ef[2][2],
-                       vRS0*Ef[0][1],vRS0*Ef[0][2],vRS0*Ef[1][2]);
+
+          fprintf(stderr,
+                  "DEBUG FLUID: rank=%d i=%d nlocal=%d "
+                  "vflag_global=%d vflag_atom=%d "
+                  "newton_pair=%d\n",
+                  comm->me, i, nlocal,
+                  vflag_global, vflag_atom, newton_pair);
+
+          double vRS0 = -vxmu2f*RS0*radi*radi*radi;
+
+          v_tally_tensor(i,i,nlocal,newton_pair,
+                        vRS0*Ef[0][0],vRS0*Ef[1][1],vRS0*Ef[2][2],
+                        vRS0*Ef[0][1],vRS0*Ef[0][2],vRS0*Ef[1][2]);
+
+          fprintf(stderr,"DEBUG FLUID: tally completed\n");
       }
     }
 
@@ -333,12 +361,23 @@ void PairLubricateBmpoly::compute(int eflag, int vflag)
       torque[i][1] += g1y;
       torque[i][2] += g1z;
 
-      if (vflag_either)
-        v_tally_tensor(i,nlocal,nlocal,newton_pair,
-                       f1x*delx,f1y*dely,f1z*delz,
-                       0.5*(f1x*dely + f1y*delx),
-                       0.5*(f1x*delz + f1z*delx),
-                       0.5*(f1y*delz + f1z*dely));
+      if (vflag_either) {
+
+          fprintf(stderr,
+                  "DEBUG PARTICLE: rank=%d i=%d j=%d nlocal=%d "
+                  "vflag_global=%d vflag_atom=%d "
+                  "newton_pair=%d\n",
+                  comm->me, i, j, nlocal,
+                  vflag_global, vflag_atom, newton_pair);
+
+          v_tally_tensor(i,j,nlocal,newton_pair,
+                        f1x*delx,f1y*dely,f1z*delz,
+                        0.5*(f1x*dely + f1y*delx),
+                        0.5*(f1x*delz + f1z*delx),
+                        0.5*(f1y*delz + f1z*dely));
+
+          fprintf(stderr,"DEBUG PARTICLE: tally completed\n");
+      }
     }
   }
 }
